@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { createFlightState, stepFlight, applyHitPenalty } from './physics'
 import { createInput } from './input'
-import { TerrainManager, terrainHeight, setTerrainStyle } from './world/terrain'
+import { TerrainManager, terrainHeight, setTerrainStyle, MAP_BOUND } from './world/terrain'
 import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
 import { WindStreaks, CrossGusts } from './world/streaks'
@@ -93,6 +93,32 @@ export class GliderEngine {
     this.glider = buildGlider()
     this.scene.add(this.glider)
 
+    // 비행 경계를 알려주는 은은한 빛의 벽 4면
+    const wallGeo = new THREE.PlaneGeometry(MAP_BOUND * 2, 320)
+    const wallMat = new THREE.MeshBasicMaterial({
+      color: '#7fd8ff',
+      transparent: true,
+      opacity: 0.06,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+    this.walls = new THREE.Group()
+    const wallDefs = [
+      [0, -MAP_BOUND, 0],
+      [0, MAP_BOUND, 0],
+      [-MAP_BOUND, 0, Math.PI / 2],
+      [MAP_BOUND, 0, Math.PI / 2],
+    ]
+    for (const [wx, wz, rot] of wallDefs) {
+      const wall = new THREE.Mesh(wallGeo, wallMat)
+      wall.position.set(wx, 140, wz)
+      wall.rotation.y = rot
+      this.walls.add(wall)
+    }
+    this.scene.add(this.walls)
+    this.wallGeo = wallGeo
+    this.wallMat = wallMat
+
     this.clock = new THREE.Clock()
     this.resize = this.resize.bind(this)
     this.loop = this.loop.bind(this)
@@ -124,6 +150,10 @@ export class GliderEngine {
     const s = this.state
 
     stepFlight(s, this.input, { wind: this.params.wind, precip: this.params.precip }, dt)
+
+    // 경계 밖으로는 못 나감 (벽 따라 미끄러짐)
+    s.pos.x = THREE.MathUtils.clamp(s.pos.x, -MAP_BOUND, MAP_BOUND)
+    s.pos.z = THREE.MathUtils.clamp(s.pos.z, -MAP_BOUND, MAP_BOUND)
 
     // 장애물 충돌 (맞은 직후엔 잠깐 무적)
     this.hitCooldown = Math.max(this.hitCooldown - dt, 0)
@@ -239,6 +269,9 @@ export class GliderEngine {
     this.city.dispose()
     this.cars.dispose()
     this.crystalField.dispose()
+    this.scene.remove(this.walls)
+    this.wallGeo.dispose()
+    this.wallMat.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()

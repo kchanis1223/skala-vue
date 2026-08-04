@@ -24,7 +24,7 @@ import {
   blockCenterZ,
 } from './cityLayout'
 
-const RANGE = 2
+const CITY_SPAN = 3 // 도시는 ±3청크(±770m)까지. 비행 경계보다 넉넉하게
 const MAX_BUILDINGS = 64 // 계단식 타워는 인스턴스 2개 먹음
 const MAX_GLASS = 24
 const MAX_TREES = 16
@@ -541,27 +541,16 @@ export class CityField {
   update(px, pz, time = 0) {
     this.lightMat.opacity = 0.35 + 0.65 * Math.abs(Math.sin(time * 2.4))
 
-    const ccx = Math.round(px / CHUNK)
-    const ccz = Math.round(pz / CHUNK)
-    const needed = new Set()
-    for (let dx = -RANGE; dx <= RANGE; dx++) {
-      for (let dz = -RANGE; dz <= RANGE; dz++) {
-        needed.add(`${ccx + dx},${ccz + dz}`)
+    // 맵이 유한해서 도시 전체(7x7 청크)를 처음에 다 만들어둠. 팝인 없음
+    if (!this.built) {
+      for (let cx = -CITY_SPAN; cx <= CITY_SPAN; cx++) {
+        for (let cz = -CITY_SPAN; cz <= CITY_SPAN; cz++) {
+          const entry = this.makeEntry()
+          this.buildChunk(entry, cx, cz)
+          this.pool.set(`${cx},${cz}`, entry)
+        }
       }
-    }
-    const free = []
-    for (const [key, entry] of this.pool) {
-      if (!needed.has(key)) {
-        this.pool.delete(key)
-        free.push(entry)
-      }
-    }
-    for (const key of needed) {
-      if (this.pool.has(key)) continue
-      const [cx, cz] = key.split(',').map(Number)
-      const entry = free.pop() ?? this.makeEntry()
-      this.buildChunk(entry, cx, cz)
-      this.pool.set(key, entry)
+      this.built = true
     }
   }
 

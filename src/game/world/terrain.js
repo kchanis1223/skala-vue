@@ -61,9 +61,10 @@ export const terrainHeight = (x, z) => {
 }
 
 export const CHUNK = 220
+export const MAP_BOUND = 600 // 비행 가능 범위 (±). 넘어가면 보이지만 못 감
+const TERRAIN_SPAN = 4 // 지형은 경계 밖까지 넉넉히 깔아둠 (±880m)
 const SEGS = 32 // 높이용 정점. 색은 텍스처가 담당해서 이 정도면 충분
 const TEX = 256 // 청크당 텍스처 해상도 (픽셀당 0.86m)
-const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 
 // 청크를 풀로 돌려쓰면서 무한 도시 바닥처럼 보이게 함
 // 바닥색은 정점색이 아니라 청크마다 캔버스 텍스처에 픽셀로 그림
@@ -85,9 +86,8 @@ export class TerrainManager {
       sand: rgb(snowy ? '#ded8c8' : '#d8c58f'),
     }
     this.pool = new Map() // "cx,cz" -> mesh
-    this.free = []
     this.queue = []
-    this.queued = new Set()
+    this.initialized = false
   }
 
   makeMesh() {
@@ -160,44 +160,33 @@ export class TerrainManager {
     this.paint(mesh, ox, oz)
   }
 
-  update(px, pz) {
-    const ccx = Math.round(px / CHUNK)
-    const ccz = Math.round(pz / CHUNK)
-    const needed = new Set()
-    for (let dx = -RANGE; dx <= RANGE; dx++) {
-      for (let dz = -RANGE; dz <= RANGE; dz++) {
-        needed.add(`${ccx + dx},${ccz + dz}`)
+  update() {
+    // 맵이 유한하니까 전 청크를 처음에 다 만들고 재활용 안 함 (팝인 방지)
+    if (!this.initialized) {
+      const keys = []
+      for (let cx = -TERRAIN_SPAN; cx <= TERRAIN_SPAN; cx++) {
+        for (let cz = -TERRAIN_SPAN; cz <= TERRAIN_SPAN; cz++) {
+          keys.push([cx, cz])
+        }
       }
+      // 시작 지점 가까운 것부터 깔리게
+      keys.sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) - (Math.abs(b[0]) + Math.abs(b[1])))
+      this.queue = keys
+      this.initialized = true
     }
-    // 안 쓰는 청크 회수
-    for (const [key, mesh] of this.pool) {
-      if (!needed.has(key)) {
-        this.pool.delete(key)
-        this.free.push(mesh)
-      }
-    }
-    for (const key of needed) {
-      if (!this.pool.has(key) && !this.queued.has(key)) {
-        this.queue.push(key)
-        this.queued.add(key)
-      }
-    }
-    // 텍스처 그리기가 무거워서 프레임당 몇 개씩만 처리 (안 그러면 뚝뚝 끊김)
+    // 텍스처 그리기가 무거워서 프레임당 몇 개씩만 처리
     let budget = 3
     while (budget > 0 && this.queue.length > 0) {
-      const key = this.queue.shift()
-      this.queued.delete(key)
-      if (this.pool.has(key) || !needed.has(key)) continue
-      const [cx, cz] = key.split(',').map(Number)
-      const mesh = this.free.pop() ?? this.makeMesh()
+      const [cx, cz] = this.queue.shift()
+      const mesh = this.makeMesh()
       this.buildChunk(mesh, cx, cz)
-      this.pool.set(key, mesh)
+      this.pool.set(`${cx},${cz}`, mesh)
       budget--
     }
   }
 
   dispose() {
-    const all = [...this.pool.values(), ...this.free]
+    const all = [...this.pool.values()]
     for (const mesh of all) {
       this.scene.remove(mesh)
       mesh.geometry.dispose()
@@ -205,6 +194,5 @@ export class TerrainManager {
       mesh.material.dispose()
     }
     this.pool.clear()
-    this.free = []
   }
 }

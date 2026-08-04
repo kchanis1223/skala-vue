@@ -47,6 +47,7 @@ const windDirLabel = computed(() => {
         </li>
         <li>🏙️ 고층 타워 옥상에서 종이비행기를 날립니다. <strong>건물에 부딪히면 추락!</strong></li>
         <li>🎈 열기구·새 떼는 스치면 속도와 고도만 잃습니다</li>
+        <li>🧭 파란 빛의 벽이 비행 구역 경계예요. 넘어갈 순 없습니다</li>
         <li>
           난이도:
           <strong>{{ '★'.repeat(difficulty) }}{{ '☆'.repeat(5 - difficulty) }}</strong>

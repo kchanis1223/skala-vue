@@ -1,8 +1,7 @@
 import * as THREE from 'three'
-import { terrainHeight, CHUNK } from './terrain'
+import { terrainHeight, CHUNK, MAP_BOUND } from './terrain'
 
-const RANGE = 2
-// 크리스탈은 활공 궤적(체인) 형태로 뿌림. 청크당 궤적 2~3개 x 8~10개
+const CRYSTAL_SPAN = 2 // 크리스탈은 비행 경계 안쪽 청크에만
 const TRAIL_STEP = 15 // 체인 간격
 
 const hash = (ix, iz) => {
@@ -116,6 +115,8 @@ export class CrystalField {
       const slope = 1.3 + r1 * 0.8 // 스텝당 하강량 (활공 하강률이랑 비슷하게)
 
       for (let i = 0; i < pattern.length; i++) {
+        // 경계 밖으로 나가는 체인은 거기서 끊음
+        if (Math.abs(x) > MAP_BOUND - 15 || Math.abs(z) > MAP_BOUND - 15) break
         const tier = TIERS.find((tr) => tr.key === pattern[i])
         if (slotCount[tier.key] >= tier.max) break
 
@@ -144,26 +145,16 @@ export class CrystalField {
   }
 
   update(px, pz, time) {
-    const ccx = Math.round(px / CHUNK)
-    const ccz = Math.round(pz / CHUNK)
-    const needed = new Set()
-    for (let dx = -RANGE; dx <= RANGE; dx++) {
-      for (let dz = -RANGE; dz <= RANGE; dz++) {
-        needed.add(`${ccx + dx},${ccz + dz}`)
+    // 경계 안 청크에만 체인 생성. 한 번 만들고 끝 (재활용 없음)
+    if (!this.built) {
+      for (let cx = -CRYSTAL_SPAN; cx <= CRYSTAL_SPAN; cx++) {
+        for (let cz = -CRYSTAL_SPAN; cz <= CRYSTAL_SPAN; cz++) {
+          const entry = this.makeEntry()
+          this.buildChunk(entry, cx, cz)
+          this.pool.set(`${cx},${cz}`, entry)
+        }
       }
-    }
-    for (const [key, entry] of this.pool) {
-      if (!needed.has(key)) {
-        this.pool.delete(key)
-        this.free.push(entry)
-      }
-    }
-    for (const key of needed) {
-      if (this.pool.has(key)) continue
-      const [cx, cz] = key.split(',').map(Number)
-      const entry = this.free.pop() ?? this.makeEntry()
-      this.buildChunk(entry, cx, cz)
-      this.pool.set(key, entry)
+      this.built = true
     }
 
     // 회전 + 둥실거림. 금색은 은은하게 맥동까지

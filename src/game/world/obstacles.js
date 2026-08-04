@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { terrainHeight } from './terrain'
+import { terrainHeight, MAP_BOUND } from './terrain'
 
 const BALLOON_COLORS = ['#ef5350', '#ffb300', '#66bb6a', '#5c6bc0', '#ec407a']
 
@@ -26,8 +26,9 @@ export class ObstacleField {
     for (let i = 0; i < count; i++) {
       const ahead = 120 + Math.random() * 160
       const side = (Math.random() - 0.5) * 100
-      const x = state.pos.x + fx * ahead - fz * side
-      const z = state.pos.z + fz * ahead + fx * side
+      // 경계 밖엔 안 뿌림
+      const x = THREE.MathUtils.clamp(state.pos.x + fx * ahead - fz * side, -MAP_BOUND, MAP_BOUND)
+      const z = THREE.MathUtils.clamp(state.pos.z + fz * ahead + fx * side, -MAP_BOUND, MAP_BOUND)
       const ground = terrainHeight(x, z)
       const y = Math.max(ground + 14, state.pos.y + (Math.random() - 0.5) * 35)
 
