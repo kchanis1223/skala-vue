@@ -30,8 +30,8 @@ const windArrowStyle = computed(() => ({
 <template>
   <div class="hud" :class="{ 'hit-flash': hitFlash }">
     <div class="hud-item">
-      <span class="hud-label">별</span>
-      <span class="hud-value star-value">⭐ {{ tick.stars ?? 0 }}</span>
+      <span class="hud-label">점수</span>
+      <span class="hud-value star-value">💎 {{ tick.stars ?? 0 }}</span>
     </div>
     <div class="hud-item">
       <span class="hud-label">고도</span>

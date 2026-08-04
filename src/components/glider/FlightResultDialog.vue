@@ -16,7 +16,7 @@ const emit = defineEmits(['retry', 'exit'])
     :close-on-click-modal="false"
   >
     <div class="result-body">
-      <p class="result-distance">⭐ {{ result.stars ?? 0 }}개</p>
+      <p class="result-distance">💎 {{ result.stars ?? 0 }}점</p>
       <p class="result-sub">
         {{ city.flag }} {{ city.name }}의 빌딩숲을 {{ result.duration }}초,
         {{ result.distance.toLocaleString() }}m 비행

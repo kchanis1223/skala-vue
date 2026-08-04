@@ -41,7 +41,10 @@ const windDirLabel = computed(() => {
           {{ flightParams.precipType === 'snow' ? '❄️ 눈' : '🌧️ 비' }}: 기체가 젖어
           <strong>더 빨리 가라앉습니다</strong>
         </li>
-        <li>🌟 도시 곳곳에 뜬 <strong>별을 떨어지기 전에 최대한 모으세요!</strong></li>
+        <li>
+          💎 <strong>크리스탈을 떨어지기 전에 최대한 모으세요!</strong> 파랑 1점 · 보라 3점 · 금색
+          5점 (비쌀수록 빌딩 사이 위험한 곳에 있어요)
+        </li>
         <li>🏙️ 고층 타워 옥상에서 종이비행기를 날립니다. <strong>건물에 부딪히면 추락!</strong></li>
         <li>🎈 열기구·새 떼는 스치면 속도와 고도만 잃습니다</li>
         <li>

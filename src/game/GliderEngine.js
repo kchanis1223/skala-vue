@@ -8,7 +8,7 @@ import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
 import { CityField } from './world/city'
 import { CarField } from './world/cars'
-import { StarField } from './world/stars'
+import { CrystalField } from './world/crystals'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
@@ -71,7 +71,7 @@ export class GliderEngine {
       isNight: params.isNight,
     })
     this.cars = new CarField(this.scene, params.style)
-    this.starField = new StarField(this.scene, this.city, params.style.seed)
+    this.crystalField = new CrystalField(this.scene, this.city, params.style)
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
     this.state = createFlightState(this.city.launchTop + 5)
@@ -157,10 +157,10 @@ export class GliderEngine {
     this.terrain.update(s.pos.x, s.pos.z)
     this.city.update(s.pos.x, s.pos.z, s.time)
     this.cars.update(s.pos, dt)
-    this.starField.update(s.pos.x, s.pos.z, s.time)
+    this.crystalField.update(s.pos.x, s.pos.z, s.time)
 
-    // 별 줍기
-    const got = this.starField.tryCollect(s.pos)
+    // 크리스탈 줍기 (점수 합산)
+    const got = this.crystalField.tryCollect(s.pos)
     if (got > 0) {
       s.stars += got
       this.onStar?.(s.stars)
@@ -238,7 +238,7 @@ export class GliderEngine {
     this.gusts.dispose()
     this.city.dispose()
     this.cars.dispose()
-    this.starField.dispose()
+    this.crystalField.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
