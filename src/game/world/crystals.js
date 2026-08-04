@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { terrainHeight, CHUNK } from './terrain'
 
 const RANGE = 2
-const PER_CHUNK = 7 // 청크당 크리스탈 수 (등급은 확률로)
+// 크리스탈은 활공 궤적(체인) 형태로 뿌림. 청크당 궤적 2~3개 x 8~10개
+const TRAIL_STEP = 15 // 체인 간격
 
 const hash = (ix, iz) => {
   let h = ix * 374761393 + iz * 668265263
@@ -39,13 +40,12 @@ const makeCrystalGeo = () => {
   return geo
 }
 
-// 파랑:보라:금색 = 7 : 2.5 : 1
+// 체인 앞쪽은 파랑, 중간 구간은 보라, 마지막은 금색
 const TIERS = [
-  { key: 't1', points: 1, color: '#6fd8ff', scale: 1 },
-  { key: 't3', points: 3, color: '#b97fff', scale: 1.25 },
-  { key: 't5', points: 5, color: '#ffc93a', scale: 1.55 },
+  { key: 't1', points: 1, color: '#6fd8ff', scale: 1, max: 30 },
+  { key: 't3', points: 3, color: '#b97fff', scale: 1.25, max: 12 },
+  { key: 't5', points: 5, color: '#ffc93a', scale: 1.55, max: 3 },
 ]
-const pickTier = (r) => (r < 7 / 10.5 ? TIERS[0] : r < 9.5 / 10.5 ? TIERS[1] : TIERS[2])
 
 // 도시에 뿌려진 크리스탈. 떨어지기 전에 최대한 모으는게 게임 목표
 export class CrystalField {
@@ -75,7 +75,7 @@ export class CrystalField {
   makeEntry() {
     const entry = { crystals: [] }
     for (const tier of TIERS) {
-      const mesh = new THREE.InstancedMesh(this.geo, this.mats[tier.key], PER_CHUNK)
+      const mesh = new THREE.InstancedMesh(this.geo, this.mats[tier.key], tier.max)
       mesh.frustumCulled = false
       this.scene.add(mesh)
       entry[tier.key] = mesh
@@ -86,29 +86,52 @@ export class CrystalField {
   buildChunk(entry, cx, cz) {
     entry.crystals = []
     const slotCount = { t1: 0, t3: 0, t5: 0 }
-    for (let i = 0; i < PER_CHUNK; i++) {
-      const r1 = hash(cx * 31 + i * 7 + this.seed, cz * 17 - i * 3)
-      const r2 = hash(cx * 13 - i * 11, cz * 41 + i * 5 + this.seed)
-      const r3 = hash(cx * 7 + i * 13, cz * 23 - i * 9 - this.seed)
-      const tier = pickTier(hash(cx * 61 + i * 29 + this.seed, cz * 37 + i * 41))
 
-      const x = cx * CHUNK + (r1 - 0.5) * CHUNK * 0.94
-      const z = cz * CHUNK + (r2 - 0.5) * CHUNK * 0.94
-      let y = terrainHeight(x, z) + 14 + r3 * 120
-      let guard = 0
-      while (this.city.collides(x, y, z) && guard++ < 50) y += 4
+    const trailCount = 2 + (hash(cx * 91 + this.seed, cz * 47) < 0.5 ? 1 : 0)
+    for (let t = 0; t < trailCount; t++) {
+      const r1 = hash(cx * 31 + t * 7 + this.seed, cz * 17 - t * 3)
+      const r2 = hash(cx * 13 - t * 11, cz * 41 + t * 5 + this.seed)
+      const r3 = hash(cx * 7 + t * 13, cz * 23 - t * 9 - this.seed)
+      const r4 = hash(cx * 61 + t * 29 + this.seed, cz * 37 + t * 41)
 
-      entry.crystals.push({
-        x,
-        y,
-        z,
-        id: `${cx},${cz},${i}`,
-        phase: r1 * Math.PI * 2,
-        tier: tier.key,
-        slot: slotCount[tier.key]++,
-        points: tier.points,
-        scale: tier.scale,
-      })
+      // 체인 시작점/방향/휘어짐/하강률. 활공하며 그대로 따라갈 수 있는 라인
+      let x = cx * CHUNK + (r1 - 0.5) * CHUNK * 0.85
+      let z = cz * CHUNK + (r2 - 0.5) * CHUNK * 0.85
+      let y = terrainHeight(x, z) + 45 + r3 * 80
+      let heading = r4 * Math.PI * 2
+      const curve = (r3 - 0.5) * 0.14 // 스텝당 선회량
+      const slope = 1.3 + r1 * 0.8 // 스텝당 하강량 (활공 하강률이랑 비슷하게)
+      const len = 8 + Math.floor(r2 * 3) // 8~10개
+
+      const midStart = Math.floor(len / 3)
+      const midEnd = Math.floor((len * 2) / 3)
+
+      for (let i = 0; i < len; i++) {
+        // 등급: 마지막=금색, 중간 구간=보라, 나머지=파랑
+        const tier = i === len - 1 ? TIERS[2] : i >= midStart && i <= midEnd ? TIERS[1] : TIERS[0]
+        if (slotCount[tier.key] >= tier.max) break
+
+        let py = Math.max(y, terrainHeight(x, z) + 7)
+        let guard = 0
+        while (this.city.collides(x, py, z) && guard++ < 30) py += 3
+
+        entry.crystals.push({
+          x,
+          y: py,
+          z,
+          id: `${cx},${cz},${t},${i}`,
+          phase: r1 * Math.PI * 2 + i * 0.7,
+          tier: tier.key,
+          slot: slotCount[tier.key]++,
+          points: tier.points,
+          scale: tier.scale,
+        })
+
+        heading += curve
+        x += -Math.sin(heading) * TRAIL_STEP
+        z += -Math.cos(heading) * TRAIL_STEP
+        y -= slope
+      }
     }
   }
 
@@ -155,7 +178,7 @@ export class CrystalField {
         entry[c.tier].setMatrixAt(c.slot, this.dummy.matrix)
       }
       for (const tier of TIERS) {
-        for (let i = 0; i < PER_CHUNK; i++) {
+        for (let i = 0; i < tier.max; i++) {
           if (used[tier.key].has(i)) continue
           this.dummy.position.set(0, -500, 0)
           this.dummy.scale.set(0.001, 0.001, 0.001)
