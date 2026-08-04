@@ -114,7 +114,7 @@ const particleClass = computed(
   pointer-events: none;
 }
 
-/* 맑음: 은은하게 숨쉬는 태양 */
+/* 맑음: 은은한 태양 */
 .sun {
   position: absolute;
   top: -120px;
