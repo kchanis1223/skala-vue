@@ -333,10 +333,12 @@ export class CityField {
 
         if (n.b >= MAX_BUILDINGS - 1) continue
 
-        // 건물 크기/높이는 지형의 기초 패드랑 똑같이 계산되도록 공용 함수에서 가져옴
+        // 건물 자리/크기는 공용 함수에서. 블록 안에서 지터된 위치라 정중앙 반복이 없음
         const plan = buildingPlan(bx, bz, seed, style)
         if (!plan) continue
         const { h, w, d, isLow } = plan
+        const { x: bwx, z: bwz } = worldFromLogical(plan.cx, plan.cz, seed)
+        const bGround = terrainHeight(bwx, bwz)
 
         const isGlass = !isLow && h > 45 && r4 < style.glassRatio
         const targetMesh = isGlass ? entry.glass : entry.buildings
@@ -348,13 +350,13 @@ export class CityField {
           const baseH = h * 0.62
           const tierH = h * 0.38
           // 언덕 경사면에서 바닥이 안 뜨게 밑동을 6m 묻음
-          this.place(targetMesh, idx, centerX, ground + (baseH - 6) / 2, centerZ, w, baseH + 6, d)
+          this.place(targetMesh, idx, bwx, bGround + (baseH - 6) / 2, bwz, w, baseH + 6, d)
           this.place(
             targetMesh,
             idx + 1,
-            centerX,
-            ground + baseH + tierH / 2 - 0.5,
-            centerZ,
+            bwx,
+            bGround + baseH + tierH / 2 - 0.5,
+            bwz,
             w * 0.68,
             tierH,
             d * 0.68,
@@ -365,7 +367,7 @@ export class CityField {
           if (isGlass) n.g += 2
           else n.b += 2
         } else {
-          this.place(targetMesh, idx, centerX, ground + (h - 6) / 2, centerZ, w, h + 6, d)
+          this.place(targetMesh, idx, bwx, bGround + (h - 6) / 2, bwz, w, h + 6, d)
           targetMesh.setColorAt(
             idx,
             this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
@@ -373,20 +375,20 @@ export class CityField {
           if (isGlass) n.g++
           else n.b++
         }
-        entry.boxes.push({ x: centerX, z: centerZ, hw: w / 2, hd: d / 2, top: ground + h })
+        entry.boxes.push({ x: bwx, z: bwz, hw: w / 2, hd: d / 2, top: bGround + h })
 
         // 옥상 디테일: 높으면 안테나/헬리패드/광고판 중 하나, 중층이면 물탱크
-        const roofY = ground + h - 0.5
+        const roofY = bGround + h - 0.5
         const r5 = blockSeed(bx, bz, seed, 5)
         if (h > 55) {
           if (r5 < 0.35 && n.an < MAX_TOWERS) {
-            this.place(entry.antennas, n.an, centerX, roofY + 3.5, centerZ, 1, 1, 1)
-            this.place(entry.lights, n.an, centerX, roofY + 7.2, centerZ, 1, 1, 1)
+            this.place(entry.antennas, n.an, bwx, roofY + 3.5, bwz, 1, 1, 1)
+            this.place(entry.lights, n.an, bwx, roofY + 7.2, bwz, 1, 1, 1)
             n.an++
           } else if (r5 < 0.6 && n.he < MAX_HELIPADS) {
-            this.place(entry.helipads, n.he++, centerX, roofY + 0.3, centerZ, 1, 1, 1)
+            this.place(entry.helipads, n.he++, bwx, roofY + 0.3, bwz, 1, 1, 1)
           } else if (r5 < 0.85 && n.bb < MAX_BILLBOARDS) {
-            this.place(entry.billboards, n.bb, centerX, roofY + 2.2, centerZ, 1, 1, 1, r1 * Math.PI)
+            this.place(entry.billboards, n.bb, bwx, roofY + 2.2, bwz, 1, 1, 1, r1 * Math.PI)
             entry.billboards.setColorAt(
               n.bb,
               this.color.set(BILLBOARD_COLORS[Math.floor(r5 * 20) % BILLBOARD_COLORS.length]),
@@ -397,9 +399,9 @@ export class CityField {
           this.place(
             entry.tanks,
             n.ta++,
-            centerX + (r1 - 0.5) * w * 0.4,
+            bwx + (r1 - 0.5) * w * 0.4,
             roofY + 1.2,
-            centerZ + (r2 - 0.5) * d * 0.4,
+            bwz + (r2 - 0.5) * d * 0.4,
             1,
             1,
             1,

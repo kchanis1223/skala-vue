@@ -66,8 +66,8 @@ export const MINOR_W = 6
 export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < 0.22
 export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < 0.22
 
-const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.6
-const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.6
+const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.52
+const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.52
 
 // 이 논리 좌표가 도로 위인지
 export const roadAt = (lx, lz, seed = 0) => {
@@ -112,23 +112,23 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   let d
   if (isLow) {
     h = 8 + r1 * 8
-    w = 20 + r2 * 9
-    d = 20 + r1 * 9
+    w = 17 + r2 * 13
+    d = 17 + r1 * 13
   } else {
     h =
       (18 + Math.pow(district, style?.downtownPow ?? 1.6) * 140 * (0.45 + r1 * 0.55)) *
       (style?.heightScale ?? 1)
-    w = 16 + r1 * 13
-    d = 16 + r2 * 13
+    w = 13 + r1 * 16
+    d = 13 + r2 * 16
   }
-  return { cx, cz, w, d, h, isLow, district, r1, r2 }
-}
 
-// 건물 발자국(+약간의 여유)만큼만 어두운 기초 패드
-export const padAt = (lx, lz, seed = 0, style = null) => {
-  const plan = buildingPlan(blockIndex(lx), blockIndex(lz), seed, style)
-  if (!plan) return false
-  return Math.abs(lx - plan.cx) < plan.w / 2 + 1.5 && Math.abs(lz - plan.cz) < plan.d / 2 + 1.5
+  // 블록 정중앙 반복이 타일처럼 보여서 자리를 지터로 흩뜨림 (도로는 안 침범하게)
+  const room = (BLOCK - ROAD_W - Math.max(w, d) - 3) / 2
+  const jitter = Math.max(room, 0)
+  const jx = (blockSeed(bx, bz, seed, 6) * 2 - 1) * jitter
+  const jz = (blockSeed(bx, bz, seed, 7) * 2 - 1) * jitter
+
+  return { cx: cx + jx, cz: cz + jz, w, d, h, isLow, district, r1, r2 }
 }
 
 export const blockSeed = (bx, bz, seed = 0, salt = 0) =>
