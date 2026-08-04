@@ -8,6 +8,7 @@ import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
 import { CityField } from './world/city'
 import { CarField } from './world/cars'
+import { StarField } from './world/stars'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
@@ -37,12 +38,13 @@ const buildGlider = () => {
 }
 
 export class GliderEngine {
-  constructor(canvas, params, { onTick, onEnd, onHit } = {}) {
+  constructor(canvas, params, { onTick, onEnd, onHit, onStar } = {}) {
     this.canvas = canvas
     this.params = params
     this.onTick = onTick
     this.onEnd = onEnd
     this.onHit = onHit
+    this.onStar = onStar
     this.running = false
     this.finished = false
     this.hitCooldown = 0
@@ -69,6 +71,7 @@ export class GliderEngine {
       isNight: params.isNight,
     })
     this.cars = new CarField(this.scene, params.style)
+    this.starField = new StarField(this.scene, this.city, params.style.seed)
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
     this.state = createFlightState(this.city.launchTop + 5)
@@ -154,6 +157,14 @@ export class GliderEngine {
     this.terrain.update(s.pos.x, s.pos.z)
     this.city.update(s.pos.x, s.pos.z, s.time)
     this.cars.update(s.pos, dt)
+    this.starField.update(s.pos.x, s.pos.z, s.time)
+
+    // 별 줍기
+    const got = this.starField.tryCollect(s.pos)
+    if (got > 0) {
+      s.stars += got
+      this.onStar?.(s.stars)
+    }
     this.precip?.update(s.pos, dt)
 
     // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
@@ -187,6 +198,7 @@ export class GliderEngine {
         distance: Math.round(s.distance),
         time: s.time,
         hits: s.hits,
+        stars: s.stars,
         // 나침반 방위 (0=북). yaw는 반시계라서 부호 뒤집음
         heading: ((((-s.yaw * 180) / Math.PI) % 360) + 360) % 360,
       })
@@ -203,6 +215,7 @@ export class GliderEngine {
           distance: Math.round(s.distance),
           duration: Math.round(s.time * 10) / 10,
           hits: s.hits,
+          stars: s.stars,
           crashed,
         })
       }
@@ -225,6 +238,7 @@ export class GliderEngine {
     this.gusts.dispose()
     this.city.dispose()
     this.cars.dispose()
+    this.starField.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()

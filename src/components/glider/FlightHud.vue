@@ -30,6 +30,10 @@ const windArrowStyle = computed(() => ({
 <template>
   <div class="hud" :class="{ 'hit-flash': hitFlash }">
     <div class="hud-item">
+      <span class="hud-label">별</span>
+      <span class="hud-value star-value">⭐ {{ tick.stars ?? 0 }}</span>
+    </div>
+    <div class="hud-item">
       <span class="hud-label">고도</span>
       <span class="hud-value">{{ tick.altitude }}m</span>
     </div>
@@ -102,6 +106,10 @@ const windArrowStyle = computed(() => ({
   display: inline-block;
   font-size: 1.05rem;
   transition: transform 0.2s;
+}
+
+.star-value {
+  color: #ffd54a;
 }
 
 /* 순풍=초록, 역풍=빨강, 측풍=주황 */

@@ -16,9 +16,10 @@ const emit = defineEmits(['retry', 'exit'])
     :close-on-click-modal="false"
   >
     <div class="result-body">
-      <p class="result-distance">{{ result.distance.toLocaleString() }}m</p>
+      <p class="result-distance">⭐ {{ result.stars ?? 0 }}개</p>
       <p class="result-sub">
-        {{ city.flag }} {{ city.name }}의 빌딩숲을 {{ result.duration }}초 비행
+        {{ city.flag }} {{ city.name }}의 빌딩숲을 {{ result.duration }}초,
+        {{ result.distance.toLocaleString() }}m 비행
       </p>
       <p v-if="result.hits > 0" class="result-hits">🎈 공중 충돌 {{ result.hits }}회</p>
       <p class="result-note">기록 저장과 랭킹은 기록실에서 곧 만나요</p>
@@ -39,7 +40,7 @@ const emit = defineEmits(['retry', 'exit'])
   margin: 0;
   font-size: 2.6rem;
   font-weight: 800;
-  color: #409eff;
+  color: #f5a623;
 }
 
 .result-sub {

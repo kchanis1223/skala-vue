@@ -18,6 +18,7 @@ export const createFlightState = (altitude = 100) => ({
   distance: 0,
   time: 0,
   hits: 0,
+  stars: 0,
 })
 
 // input: { turn: -1~1, pitch: -1~1 } / env: { wind: {x,z}, precip: 0~1 }
