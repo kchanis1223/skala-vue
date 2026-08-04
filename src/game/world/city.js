@@ -7,7 +7,11 @@ import {
   blockType,
   blockSeed,
   districtLevel,
-  inRiver,
+  riverCenterX,
+  RIVER_HALF,
+  inSea,
+  seaStartX,
+  worldFromLogical,
 } from './cityLayout'
 
 const RANGE = 2
@@ -22,9 +26,11 @@ const MAX_HELIPADS = 8
 const MAX_TOWERS = 10
 const MAX_CRANES = 6 // 크레인 하나가 기둥+팔 2개
 const MAX_DASHES = 150
+const MAX_SHIPS = 5
 const LAUNCH_HALF = 14
 
 const BILLBOARD_COLORS = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff8fab']
+const SHIP_COLORS = ['#b03a3a', '#2f5d8a', '#3d6b4f', '#7a5230']
 
 // 창문 격자 텍스처. 밤이면 불 켜진 창이 많아짐
 const makeWindowTexture = (isNight, glass = false) => {
@@ -116,6 +122,10 @@ export class CityField {
     this.craneMat = new THREE.MeshLambertMaterial({ color: '#e8a838', flatShading: true })
     this.dashGeo = new THREE.BoxGeometry(0.4, 0.14, 3)
     this.dashMat = new THREE.MeshLambertMaterial({ color: snowy ? '#c8ced4' : '#d8d43f' })
+    this.shipHullGeo = new THREE.BoxGeometry(5, 1.8, 14)
+    this.shipHullMat = new THREE.MeshLambertMaterial({ flatShading: true })
+    this.shipCabinGeo = new THREE.BoxGeometry(3.2, 2.4, 4)
+    this.shipCabinMat = new THREE.MeshLambertMaterial({ color: '#e8ecef' })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -152,6 +162,8 @@ export class CityField {
       lights: make(this.lightGeo, this.lightMat, MAX_TOWERS),
       cranes: make(this.craneGeo, this.craneMat, MAX_CRANES * 2),
       dashes: make(this.dashGeo, this.dashMat, MAX_DASHES),
+      shipHulls: make(this.shipHullGeo, this.shipHullMat, MAX_SHIPS),
+      shipCabins: make(this.shipCabinGeo, this.shipCabinMat, MAX_SHIPS),
       boxes: [],
     }
   }
@@ -193,6 +205,7 @@ export class CityField {
       an: 0,
       cr: 0,
       da: 0,
+      sh: 0,
     }
 
     const bx0 = blockIndex(ox - half)
@@ -202,20 +215,52 @@ export class CityField {
 
     for (let bx = bx0; bx <= bx1; bx++) {
       for (let bz = bz0; bz <= bz1; bz++) {
-        const centerX = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
-        const centerZ = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
-        if (centerX < ox - half || centerX >= ox + half) continue
-        if (centerZ < oz - half || centerZ >= oz + half) continue
-        if (Math.hypot(centerX, centerZ) < 55) continue // 발사 타워 주변은 비움
-        if (style.river && inRiver(centerX, centerZ, seed)) continue // 강엔 안 지음
+        // 논리 좌표(반듯한 격자)에서 정하고, 실제로 놓을 땐 워프 적용한 월드 좌표로
+        const logicalX = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+        const logicalZ = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+        if (logicalX < ox - half || logicalX >= ox + half) continue
+        if (logicalZ < oz - half || logicalZ >= oz + half) continue
+        if (Math.hypot(logicalX, logicalZ) < 55) continue // 발사 타워 주변은 비움
 
-        const type = blockType(bx, bz, seed, style.parkProb, style.plazaProb)
-        const ground = terrainHeight(centerX, centerZ)
-        const district = districtLevel(centerX, centerZ, seed)
         const r1 = blockSeed(bx, bz, seed)
         const r2 = blockSeed(bx, bz, seed, 1)
         const r3 = blockSeed(bx, bz, seed, 2)
         const r4 = blockSeed(bx, bz, seed, 3)
+
+        // 바다 블록: 건물 대신 가끔 배가 떠 있음
+        if (inSea(logicalX, logicalZ, seed, style)) {
+          if (logicalX < seaStartX(logicalZ, seed) + 260 && r1 < 0.2 && n.sh < MAX_SHIPS) {
+            const rot = blockSeed(bx, bz, seed, 8) * Math.PI * 2
+            const sw = worldFromLogical(logicalX, logicalZ, seed)
+            this.place(entry.shipHulls, n.sh, sw.x, -1.1, sw.z, 1, 1, 1, rot)
+            this.place(
+              entry.shipCabins,
+              n.sh,
+              sw.x + Math.sin(rot) * 3.6,
+              0.5,
+              sw.z + Math.cos(rot) * 3.6,
+              1,
+              1,
+              1,
+              rot,
+            )
+            entry.shipHulls.setColorAt(
+              n.sh,
+              this.color.set(SHIP_COLORS[Math.floor(r2 * SHIP_COLORS.length)]),
+            )
+            n.sh++
+          }
+          continue
+        }
+        // 해변이랑 강가엔 안 지음
+        if (style.coast && logicalX > seaStartX(logicalZ, seed) - 30) continue
+        if (style.river && Math.abs(logicalX - riverCenterX(logicalZ, seed)) < RIVER_HALF + 12)
+          continue
+
+        const type = blockType(bx, bz, seed, style.parkProb, style.plazaProb)
+        const { x: centerX, z: centerZ } = worldFromLogical(logicalX, logicalZ, seed)
+        const ground = terrainHeight(centerX, centerZ)
+        const district = districtLevel(logicalX, logicalZ, seed)
 
         if (type === 'park') {
           // 공원: 나무 + 덤불 + 가끔 연못
@@ -249,10 +294,10 @@ export class CityField {
               entry.cranes,
               n.cr * 2,
               centerX,
-              ground + mastH / 2,
+              ground + (mastH - 6) / 2,
               centerZ,
               1.4,
-              mastH,
+              mastH + 6,
               1.4,
             )
             this.place(
@@ -309,7 +354,8 @@ export class CityField {
         if (tiered) {
           const baseH = h * 0.62
           const tierH = h * 0.38
-          this.place(targetMesh, idx, centerX, ground + baseH / 2 - 0.5, centerZ, w, baseH, d)
+          // 언덕 경사면에서 바닥이 안 뜨게 밑동을 6m 묻음
+          this.place(targetMesh, idx, centerX, ground + (baseH - 6) / 2, centerZ, w, baseH + 6, d)
           this.place(
             targetMesh,
             idx + 1,
@@ -326,7 +372,7 @@ export class CityField {
           if (isGlass) n.g += 2
           else n.b += 2
         } else {
-          this.place(targetMesh, idx, centerX, ground + h / 2 - 0.5, centerZ, w, h, d)
+          this.place(targetMesh, idx, centerX, ground + (h - 6) / 2, centerZ, w, h + 6, d)
           targetMesh.setColorAt(
             idx,
             this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
@@ -369,16 +415,21 @@ export class CityField {
       }
     }
 
-    // 도로 중앙선 (점선). 다리 위에도 이어짐
+    // 도로 중앙선 (점선). 논리 격자 선을 따라 찍되 워프를 적용해서 도로랑 같이 휘어짐
     const lineStart = (v) => Math.ceil((v - half) / BLOCK) * BLOCK + ROAD_W / 2
+    const putDash = (dlx, dlz, rotY) => {
+      if (inSea(dlx, dlz, seed, style)) return
+      const dw = worldFromLogical(dlx, dlz, seed)
+      this.place(entry.dashes, n.da++, dw.x, terrainHeight(dw.x, dw.z) + 0.12, dw.z, 1, 1, 1, rotY)
+    }
     for (let lx = lineStart(ox); lx < ox + half && n.da < MAX_DASHES; lx += BLOCK) {
       for (let z = oz - half + 4; z < oz + half && n.da < MAX_DASHES; z += 15) {
-        this.place(entry.dashes, n.da++, lx, terrainHeight(lx, z) + 0.1, z, 1, 1, 1)
+        putDash(lx, z, 0)
       }
     }
     for (let lz = lineStart(oz); lz < oz + half && n.da < MAX_DASHES; lz += BLOCK) {
       for (let x = ox - half + 4; x < ox + half && n.da < MAX_DASHES; x += 15) {
-        this.place(entry.dashes, n.da++, x, terrainHeight(x, lz) + 0.1, lz, 1, 1, 1, Math.PI / 2)
+        putDash(x, lz, Math.PI / 2)
       }
     }
 
@@ -394,6 +445,8 @@ export class CityField {
     this.hideRest(entry.lights, n.an, MAX_TOWERS)
     this.hideRest(entry.cranes, n.cr * 2, MAX_CRANES * 2)
     this.hideRest(entry.dashes, n.da, MAX_DASHES)
+    this.hideRest(entry.shipHulls, n.sh, MAX_SHIPS)
+    this.hideRest(entry.shipCabins, n.sh, MAX_SHIPS)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -492,5 +545,9 @@ export class CityField {
     this.craneMat.dispose()
     this.dashGeo.dispose()
     this.dashMat.dispose()
+    this.shipHullGeo.dispose()
+    this.shipHullMat.dispose()
+    this.shipCabinGeo.dispose()
+    this.shipCabinMat.dispose()
   }
 }

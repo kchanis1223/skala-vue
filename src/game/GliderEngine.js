@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { createFlightState, stepFlight, applyHitPenalty } from './physics'
 import { createInput } from './input'
-import { TerrainManager, terrainHeight } from './world/terrain'
+import { TerrainManager, terrainHeight, setTerrainStyle } from './world/terrain'
 import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
 import { WindStreaks, CrossGusts } from './world/streaks'
@@ -54,6 +54,9 @@ export class GliderEngine {
     this.scene = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera(66, 1, 0.1, 2000)
 
+    // 지형 함수가 도시 스타일(언덕/해안/강)을 알아야 해서 제일 먼저 세팅
+    setTerrainStyle(params.style)
+
     this.sky = setupSky(this.scene, { theme: params.theme, isNight: params.isNight })
     this.terrain = new TerrainManager(this.scene, {
       snowy: params.theme === 'snow',
@@ -64,7 +67,7 @@ export class GliderEngine {
       snowy: params.theme === 'snow',
       isNight: params.isNight,
     })
-    this.cars = new CarField(this.scene)
+    this.cars = new CarField(this.scene, params.style)
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
     this.state = createFlightState(this.city.launchTop + 5)

@@ -15,6 +15,7 @@ const BASE = {
   parkProb: 0.15,
   plazaProb: 0.09,
   river: false,
+  coast: false, // 해안 도시면 한쪽이 바다
   tints: DEFAULT_TINTS,
   lotColor: null, // null이면 기본 콘크리트색
 }
@@ -22,12 +23,12 @@ const BASE = {
 // 도시별 개성. 없는 도시(직접 추가한 도시)는 이름 해시로 적당히 만들어줌
 const STYLES = {
   city_01: { river: true, glassRatio: 0.35 }, // 서울
-  city_02: { river: true, heightScale: 0.95, lowriseRatio: 0.35 }, // 부산
+  city_02: { coast: true, heightScale: 0.95, lowriseRatio: 0.35 }, // 부산
   city_03: { heightScale: 1.3, glassRatio: 0.55, lowriseRatio: 0.12, parkProb: 0.1, river: true }, // 뉴욕
   city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA
   city_05: { heightScale: 0.9, glassRatio: 0.18, tints: COLD_TINTS }, // 모스크바
-  city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22 }, // 리우
-  city_07: { glassRatio: 0.45, parkProb: 0.18, river: true }, // 시드니
+  city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22, coast: true }, // 리우
+  city_07: { glassRatio: 0.45, parkProb: 0.18, coast: true }, // 시드니
   city_08: {
     heightScale: 1.55,
     glassRatio: 0.6,
@@ -36,12 +37,18 @@ const STYLES = {
     plazaProb: 0.2,
     lotColor: '#cbb37f', // 두바이는 모래빛 바닥
   },
-  city_09: { heightScale: 0.85, lowriseRatio: 0.45, parkProb: 0.1 }, // 마닐라
-  city_10: { heightScale: 0.6, lowriseRatio: 0.55, parkProb: 0.22, tints: WARM_TINTS }, // 스톡홀름
+  city_09: { heightScale: 0.85, lowriseRatio: 0.45, parkProb: 0.1, coast: true }, // 마닐라
+  city_10: {
+    heightScale: 0.6,
+    lowriseRatio: 0.55,
+    parkProb: 0.22,
+    tints: WARM_TINTS,
+    coast: true,
+  }, // 스톡홀름
   city_11: { heightScale: 0.55, lowriseRatio: 0.45, tints: CREAM_TINTS, river: true }, // 파리
   city_12: { heightScale: 0.85, river: true }, // 런던
   city_13: { heightScale: 0.8, parkProb: 0.24, river: true }, // 베를린
-  city_14: { heightScale: 0.7, lowriseRatio: 0.4 }, // 케이프타운
+  city_14: { heightScale: 0.7, lowriseRatio: 0.4, coast: true }, // 케이프타운
   city_15: { heightScale: 1.15, glassRatio: 0.4, parkProb: 0.12 }, // 베이징
 }
 

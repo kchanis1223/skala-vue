@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { groundKind } from './cityLayout'
+import { groundKind, toLogical, seaStartX, inRiver, riverCenterX, RIVER_HALF } from './cityLayout'
 
 // 라이브러리 없이 해시 기반 밸류 노이즈로 언덕 높이 만들기
 const hash = (ix, iz) => {
@@ -24,12 +24,32 @@ const noise2d = (x, z, scale) => {
   return a + (b - a) * tx + (c - a + (a - b + d - c) * tx) * tz
 }
 
-// 지형 높이. 도시라서 거의 평지고 살짝만 굽이침
+// 지형은 도시 스타일(시드/해안/강)에 따라 달라져서 비행 시작 때 세팅해줌
+let activeStyle = null
+export const setTerrainStyle = (style) => {
+  activeStyle = style
+}
+
+// 지형 높이. 완만한 언덕 위에 도시가 얹혀 있음
 // 물리 충돌이랑 메쉬가 같은 함수를 써야 안 뚫림
 export const terrainHeight = (x, z) => {
-  const big = noise2d(x, z, 300) * 5
-  const small = noise2d(x + 999, z - 999, 60) * 1.5
-  return big + small
+  const seed = activeStyle?.seed ?? 0
+  let h = noise2d(x + seed * 13, z - seed * 7, 420) * 14 + noise2d(x + 999, z - 999, 90) * 3
+
+  const { lx, lz } = toLogical(x, z, seed)
+  // 해안 도시는 바다 쪽으로 갈수록 낮아지다가 물속으로
+  if (activeStyle?.coast) {
+    const s = seaStartX(lz, seed)
+    const t = Math.min(Math.max((lx - (s - 50)) / 50, 0), 1)
+    h = h * (1 - t) - t * 2.4
+  }
+  // 강 주변은 저지대로 깎임
+  if (activeStyle?.river) {
+    const dist = Math.abs(lx - riverCenterX(lz, seed))
+    const t = Math.min(Math.max((RIVER_HALF + 16 - dist) / 16, 0), 1)
+    if (t > 0) h = h * (1 - t) + (inRiver(lx, lz, seed) ? -1.5 : 0) * t
+  }
+  return h
 }
 
 export const CHUNK = 220
@@ -46,6 +66,7 @@ export class TerrainManager {
     this.park = new THREE.Color(snowy ? '#c8d6cc' : '#5f9450')
     this.lot = new THREE.Color(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6'))
     this.water = new THREE.Color(snowy ? '#a8c7d8' : '#3f7fae')
+    this.sand = new THREE.Color(snowy ? '#ded8c8' : '#d8c58f')
     this.pool = new Map() // "cx,cz" -> mesh
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
   }
@@ -61,8 +82,7 @@ export class TerrainManager {
       const wx = pos.getX(i) + ox
       const wz = pos.getZ(i) + oz
       const kind = groundKind(wx, wz, seed, this.style)
-      // 물은 살짝 파여 보이게
-      pos.setY(i, terrainHeight(wx, wz) - (kind === 'water' ? 1.2 : 0))
+      pos.setY(i, terrainHeight(wx, wz))
       const c =
         kind === 'road'
           ? this.road
@@ -70,7 +90,9 @@ export class TerrainManager {
             ? this.park
             : kind === 'water'
               ? this.water
-              : this.lot
+              : kind === 'sand'
+                ? this.sand
+                : this.lot
       colors.setXYZ(i, c.r, c.g, c.b)
     }
     pos.needsUpdate = true
