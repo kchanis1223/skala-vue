@@ -1,1 +1,0 @@
-import{L as e,V as t,_ as n,p as r}from"./runtime-core.esm-bundler-M0I8n9P3.js";import{i}from"./index-BjGKi3DA.js";var a={},o={class:`records-view`};function s(i,a){let s=t(`el-alert`);return e(),r(`div`,o,[n(s,{type:`warning`,closable:!1,title:`🚧 비행 기록실 준비중`,description:`비행 기록을 저장해서 도시별 랭킹이랑 날씨별 통계를 보여줄 예정입니다.`})])}var c=i(a,[[`render`,s]]);export{c as default};
