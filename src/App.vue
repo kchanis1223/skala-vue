@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import UnitToggler from '@/components/exercise/UnitToggler.vue'
@@ -9,6 +10,14 @@ import { THEMES } from '@/utils/weatherTheme'
 const flightStore = useFlightStore()
 // 스토어 구조분해는 storeToRefs로 해야 반응성이 안 깨짐
 const { selectedCity, themeKey } = storeToRefs(flightStore)
+
+// 도쿄"이" 처럼 어색해져서 받침 보고 이/가 붙임
+const nameParticle = computed(() => {
+  const name = selectedCity.value?.name ?? ''
+  const lastCode = name.charCodeAt(name.length - 1)
+  if (lastCode < 0xac00 || lastCode > 0xd7a3) return '이(가)'
+  return (lastCode - 0xac00) % 28 > 0 ? '이' : '가'
+})
 </script>
 
 <template>
@@ -34,7 +43,7 @@ const { selectedCity, themeKey } = storeToRefs(flightStore)
       <span class="chip-emoji">{{ THEMES[themeKey].emoji }}</span>
       <span>
         <strong>{{ selectedCity.name }}</strong
-        >이 선택되었습니다
+        >{{ nameParticle }} 선택되었습니다
         <template v-if="THEMES[themeKey].label"> · {{ THEMES[themeKey].label }}</template>
       </span>
     </div>

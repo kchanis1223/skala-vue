@@ -1,14 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { mockWeatherList } from '@/data/mockWeather'
+import { cityList } from '@/data/cities'
 
 const route = useRoute()
 
 // /glider?city=city_01 이런 식으로 출발 도시 받음
-const departureCity = computed(
-  () => mockWeatherList.find((city) => city.id === route.query.city) ?? null,
-)
+const departureCity = computed(() => cityList.find((city) => city.id === route.query.city) ?? null)
 </script>
 
 <template>

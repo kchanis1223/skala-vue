@@ -15,7 +15,7 @@ const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
 <template>
   <article class="weather-card" @click="emit('select-card', cityItem)">
     <div class="card-head">
-      <h3 class="city-name">{{ cityItem.name }}</h3>
+      <h3 class="city-name">{{ cityItem.flag }} {{ cityItem.name }}</h3>
       <el-tag size="small" effect="plain">{{ cityItem.status }}</el-tag>
     </div>
 

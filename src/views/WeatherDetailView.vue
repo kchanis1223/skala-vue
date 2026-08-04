@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mockWeatherList } from '@/data/mockWeather'
+import { cityList } from '@/data/cities'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
@@ -18,7 +18,7 @@ const notFound = ref(false)
 
 // 마운트될 때 url의 cityId로 도시 찾고 실제 날씨 + 미세먼지 가져옴
 onMounted(async () => {
-  const baseCity = mockWeatherList.find((city) => city.id === route.params.cityId)
+  const baseCity = cityList.find((city) => city.id === route.params.cityId)
   if (!baseCity) {
     notFound.value = true
     return
@@ -53,7 +53,7 @@ const goGlider = () => {
     <el-card v-else-if="cityInfo">
       <template #header>
         <div class="detail-head">
-          <h2 class="detail-title">{{ cityInfo.name }} 상세 날씨</h2>
+          <h2 class="detail-title">{{ cityInfo.flag }} {{ cityInfo.name }} 상세 날씨</h2>
           <el-tag effect="dark">{{ cityInfo.status }}</el-tag>
         </div>
       </template>

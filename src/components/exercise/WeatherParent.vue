@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import BaseDashboardCard from './BaseDashboardCard.vue'
 import SearchBar from './SearchBar.vue'
 import WeatherCard from './WeatherCard.vue'
-import { mockWeatherList } from '@/data/mockWeather'
+import { cityList } from '@/data/cities'
 import { useWeatherApi } from '@/composables/useWeatherApi'
 import { useFlightStore } from '@/stores/flightStore'
 
@@ -13,12 +13,12 @@ const { isLoading, usingMock, fetchAllCities } = useWeatherApi()
 const flightStore = useFlightStore()
 
 // 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
-const weatherList = ref([...mockWeatherList])
+const weatherList = ref([...cityList])
 const searchQuery = ref('')
 const selectedCityInfo = ref(null)
 
 const loadWeather = async () => {
-  weatherList.value = await fetchAllCities(mockWeatherList)
+  weatherList.value = await fetchAllCities(cityList)
 }
 
 onMounted(loadWeather)
