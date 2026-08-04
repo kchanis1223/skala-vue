@@ -58,28 +58,54 @@ export const blockType = (bx, bz, seed = 0, plazaProb = 0.09) => {
 export const parkAt = (lx, lz, seed = 0, style = null) =>
   noise2d(lx, lz, 260, seed + 321) > 0.8 - (style?.parkProb ?? 0.15) * 0.8
 
-// 도로 위계: 몇 줄에 하나씩 넓은 대로, 나머지는 골목
-// 골목은 구간(블록 경계)마다 없기도 해서 블록들이 합쳐진 것처럼 보임
-export const MAJOR_W = 11
-export const MINOR_W = 6
+// 도로 위계: 몇 줄에 하나씩 넓은 대로, 나머지는 좁은 골목
+// 골목은 구간마다 없는 경우가 더 많아서(35%만 생존) 블록들이 크게 합쳐짐
+export const MAJOR_W = 12
+export const MINOR_W = 5
+
+// 격자선 위치 자체를 선마다 ±8m 밀어서 블록 크기가 제각각이 되게 함
+const lineJitter = (k, seed, salt) => (hash(k * 11 + salt + seed, k * 3 - salt - seed) - 0.5) * 16
+export const linePosX = (k, seed = 0) => k * BLOCK + lineJitter(k, seed, 5)
+export const linePosZ = (k, seed = 0) => k * BLOCK + lineJitter(k, seed, 77)
+
+export const lineIndexX = (v, seed = 0) => {
+  let k = Math.floor(v / BLOCK)
+  if (v < linePosX(k, seed)) k -= 1
+  else if (v >= linePosX(k + 1, seed)) k += 1
+  return k
+}
+export const lineIndexZ = (v, seed = 0) => {
+  let k = Math.floor(v / BLOCK)
+  if (v < linePosZ(k, seed)) k -= 1
+  else if (v >= linePosZ(k + 1, seed)) k += 1
+  return k
+}
+
+// 블록(k, k+1 선 사이) 내부의 중심
+export const blockCenterX = (k, seed = 0) =>
+  (linePosX(k, seed) + MAJOR_W + linePosX(k + 1, seed)) / 2
+export const blockCenterZ = (k, seed = 0) =>
+  (linePosZ(k, seed) + MAJOR_W + linePosZ(k + 1, seed)) / 2
 
 export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < 0.22
 export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < 0.22
 
-const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.52
-const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.52
+const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.35
+const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.35
 
-// 이 논리 좌표가 도로 위인지
+// 이 논리 좌표가 도로면 'major'/'minor', 아니면 null
 export const roadAt = (lx, lz, seed = 0) => {
-  const kx = blockIndex(lx)
-  const kz = blockIndex(lz)
-  const llx = lx - kx * BLOCK
-  const llz = lz - kz * BLOCK
+  const kx = lineIndexX(lx, seed)
+  const kz = lineIndexZ(lz, seed)
+  const dx = lx - linePosX(kx, seed)
+  const dz = lz - linePosZ(kz, seed)
   const majX = isMajorX(kx, seed)
   const majZ = isMajorZ(kz, seed)
-  if (llx < (majX ? MAJOR_W : MINOR_W) && (majX || segExistsX(kx, kz, seed))) return true
-  if (llz < (majZ ? MAJOR_W : MINOR_W) && (majZ || segExistsZ(kx, kz, seed))) return true
-  return false
+  if (dx < (majX ? MAJOR_W : MINOR_W) && (majX || segExistsX(kx, kz, seed)))
+    return majX ? 'major' : 'minor'
+  if (dz < (majZ ? MAJOR_W : MINOR_W) && (majZ || segExistsZ(kx, kz, seed)))
+    return majZ ? 'major' : 'minor'
+  return null
 }
 
 // 부지 바닥 명암: 블록 경계 없이 연속 노이즈로 얼룩덜룩하게
@@ -89,11 +115,11 @@ export const lotShade = (x, z, seed = 0) => {
   return 0.86 + broad * 0.2 + fine * 0.08
 }
 
-// 이 블록에 설 건물의 계획(위치/크기). 지형의 기초 패드랑 실제 건물이 똑같이 계산함
+// 이 블록에 설 건물의 계획(위치/크기)
 export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   if (blockType(bx, bz, seed, style?.plazaProb) !== 'build') return null
-  const cx = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
-  const cz = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+  const cx = blockCenterX(bx, seed)
+  const cz = blockCenterZ(bz, seed)
   if (Math.hypot(cx, cz) < 55) return null // 발사 타워 자리
   if (inSea(cx, cz, seed, style)) return null
   if (style?.coast && cx > seaStartX(cz, seed) - 30) return null
@@ -122,9 +148,14 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
     d = 13 + r2 * 16
   }
 
+  // 블록 크기가 제각각이라 그 안에 들어가게 자름
+  const gapX = linePosX(bx + 1, seed) - linePosX(bx, seed) - MAJOR_W - 2
+  const gapZ = linePosZ(bz + 1, seed) - linePosZ(bz, seed) - MAJOR_W - 2
+  w = Math.min(w, gapX - 3)
+  d = Math.min(d, gapZ - 3)
+
   // 블록 정중앙 반복이 타일처럼 보여서 자리를 지터로 흩뜨림 (도로는 안 침범하게)
-  const room = (BLOCK - ROAD_W - Math.max(w, d) - 3) / 2
-  const jitter = Math.max(room, 0)
+  const jitter = Math.max(Math.min(gapX - w, gapZ - d) / 2 - 1, 0)
   const jx = (blockSeed(bx, bz, seed, 6) * 2 - 1) * jitter
   const jz = (blockSeed(bx, bz, seed, 7) * 2 - 1) * jitter
 
@@ -151,7 +182,7 @@ export const seaStartX = (lz, seed = 0) =>
 
 export const inSea = (lx, lz, seed, style) => !!style?.coast && lx > seaStartX(lz, seed)
 
-// 이 좌표 바닥이 뭔지: 물 / 모래사장 / 도로 / 공원 / 주차장 / 부지
+// 이 좌표 바닥이 뭔지: 물 / 모래사장 / 대로 / 골목 / 공원 / 주차장 / 부지
 export const groundKind = (x, z, seed = 0, style = null) => {
   const { lx, lz } = toLogical(x, z, seed)
   if (style?.coast) {
@@ -159,13 +190,14 @@ export const groundKind = (x, z, seed = 0, style = null) => {
     if (lx > s) return 'water'
     if (lx > s - 14) return 'sand'
   }
-  const onRoad = roadAt(lx, lz, seed)
+  const road = roadAt(lx, lz, seed)
   // 도로선은 강 위에서도 이어져서 다리가 됨
-  if (style?.river && inRiver(lx, lz, seed)) return onRoad ? 'road' : 'water'
-  if (onRoad) return 'road'
-  // 공원 얼룩이 격자 위에 얹힘 (도로만 그 위를 지나감)
+  if (style?.river && inRiver(lx, lz, seed)) return road ? 'road' : 'water'
+  if (road === 'major') return 'road'
+  // 골목은 주변 부지색에 섞이는 은은한 길 (경계선처럼 안 보이게)
+  if (road === 'minor') return 'alley'
   if (parkAt(lx, lz, seed, style)) return 'park'
-  const type = blockType(blockIndex(lx), blockIndex(lz), seed, style?.plazaProb)
+  const type = blockType(lineIndexX(lx, seed), lineIndexZ(lz, seed), seed, style?.plazaProb)
   if (type === 'parking') return 'parking'
   return 'lot'
 }

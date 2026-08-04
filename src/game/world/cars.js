@@ -1,6 +1,15 @@
 import * as THREE from 'three'
 import { terrainHeight } from './terrain'
-import { BLOCK, MAJOR_W, worldFromLogical, inSea, isMajorX, isMajorZ } from './cityLayout'
+import {
+  BLOCK,
+  MAJOR_W,
+  worldFromLogical,
+  inSea,
+  isMajorX,
+  isMajorZ,
+  linePosX,
+  linePosZ,
+} from './cityLayout'
 
 const COUNT = 34
 const CAR_COLORS = ['#d64541', '#f5f5f5', '#37474f', '#3f6fb5', '#e8b23a', '#8d6e63', '#5cb85c']
@@ -38,7 +47,7 @@ export class CarField {
         break
       }
     }
-    car.line = k * BLOCK + MAJOR_W / 2
+    car.line = (car.axis === 'x' ? linePosZ(k, this.seed) : linePosX(k, this.seed)) + MAJOR_W / 2
     const along = car.axis === 'x' ? px : pz
     car.pos = along + (Math.random() - 0.5) * 420
     car.dir = Math.random() < 0.5 ? 1 : -1

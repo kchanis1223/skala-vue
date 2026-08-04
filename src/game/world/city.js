@@ -2,8 +2,6 @@ import * as THREE from 'three'
 import { terrainHeight, CHUNK } from './terrain'
 import {
   BLOCK,
-  ROAD_W,
-  blockIndex,
   blockType,
   blockSeed,
   districtLevel,
@@ -17,6 +15,12 @@ import {
   MAJOR_W,
   parkAt,
   buildingPlan,
+  lineIndexX,
+  lineIndexZ,
+  linePosX,
+  linePosZ,
+  blockCenterX,
+  blockCenterZ,
 } from './cityLayout'
 
 const RANGE = 2
@@ -213,16 +217,16 @@ export class CityField {
       sh: 0,
     }
 
-    const bx0 = blockIndex(ox - half)
-    const bx1 = blockIndex(ox + half)
-    const bz0 = blockIndex(oz - half)
-    const bz1 = blockIndex(oz + half)
+    const bx0 = lineIndexX(ox - half, seed)
+    const bx1 = lineIndexX(ox + half, seed)
+    const bz0 = lineIndexZ(oz - half, seed)
+    const bz1 = lineIndexZ(oz + half, seed)
 
     for (let bx = bx0; bx <= bx1; bx++) {
       for (let bz = bz0; bz <= bz1; bz++) {
-        // 논리 좌표(반듯한 격자)에서 정하고, 실제로 놓을 땐 워프 적용한 월드 좌표로
-        const logicalX = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
-        const logicalZ = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+        // 논리 좌표(격자 세계)에서 정하고, 실제로 놓을 땐 워프 적용한 월드 좌표로
+        const logicalX = blockCenterX(bx, seed)
+        const logicalZ = blockCenterZ(bz, seed)
         if (logicalX < ox - half || logicalX >= ox + half) continue
         if (logicalZ < oz - half || logicalZ >= oz + half) continue
         if (Math.hypot(logicalX, logicalZ) < 55) continue // 발사 타워 주변은 비움
@@ -271,16 +275,16 @@ export class CityField {
           for (let t = 0; t < 5 && n.t < MAX_TREES; t++) {
             const p1 = blockSeed(bx, bz, seed, t + 4)
             const p2 = blockSeed(bx, bz, seed, t + 11)
-            const wx = centerX + (p1 - 0.5) * (BLOCK - ROAD_W - 6)
-            const wz = centerZ + (p2 - 0.5) * (BLOCK - ROAD_W - 6)
+            const wx = centerX + (p1 - 0.5) * (BLOCK - MAJOR_W - 6)
+            const wz = centerZ + (p2 - 0.5) * (BLOCK - MAJOR_W - 6)
             const sc = 0.8 + p2 * 1.1
             this.place(entry.trees, n.t++, wx, terrainHeight(wx, wz) + 3 * sc, wz, sc, sc, sc)
           }
           for (let t = 0; t < 4 && n.bu < MAX_BUSHES; t++) {
             const p1 = blockSeed(bx, bz, seed, t + 20)
             const p2 = blockSeed(bx, bz, seed, t + 27)
-            const wx = centerX + (p1 - 0.5) * (BLOCK - ROAD_W - 4)
-            const wz = centerZ + (p2 - 0.5) * (BLOCK - ROAD_W - 4)
+            const wx = centerX + (p1 - 0.5) * (BLOCK - MAJOR_W - 4)
+            const wz = centerZ + (p2 - 0.5) * (BLOCK - MAJOR_W - 4)
             this.place(entry.bushes, n.bu++, wx, terrainHeight(wx, wz) + 0.9, wz, 1, 1, 1)
           }
           if (r1 < 0.45 && n.po < MAX_PONDS) {
@@ -416,17 +420,17 @@ export class CityField {
       const dw = worldFromLogical(dlx, dlz, seed)
       this.place(entry.dashes, n.da++, dw.x, terrainHeight(dw.x, dw.z) + 0.12, dw.z, 1, 1, 1, rotY)
     }
-    for (let k = blockIndex(ox - half); k <= blockIndex(ox + half); k++) {
+    for (let k = lineIndexX(ox - half, seed); k <= lineIndexX(ox + half, seed); k++) {
       if (!isMajorX(k, seed)) continue
-      const lx = k * BLOCK + MAJOR_W / 2
+      const lx = linePosX(k, seed) + MAJOR_W / 2
       if (lx < ox - half || lx >= ox + half) continue
       for (let z = oz - half + 4; z < oz + half && n.da < MAX_DASHES; z += 15) {
         putDash(lx, z, 0)
       }
     }
-    for (let k = blockIndex(oz - half); k <= blockIndex(oz + half); k++) {
+    for (let k = lineIndexZ(oz - half, seed); k <= lineIndexZ(oz + half, seed); k++) {
       if (!isMajorZ(k, seed)) continue
-      const lz = k * BLOCK + MAJOR_W / 2
+      const lz = linePosZ(k, seed) + MAJOR_W / 2
       if (lz < oz - half || lz >= oz + half) continue
       for (let x = ox - half + 4; x < ox + half && n.da < MAX_DASHES; x += 15) {
         putDash(x, lz, Math.PI / 2)

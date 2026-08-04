@@ -123,6 +123,10 @@ export class TerrainManager {
         if (kind === 'lot') {
           base = this.palette.lot
           shade = lotShade(wx, wz, seed)
+        } else if (kind === 'alley') {
+          // 골목은 주변 부지색을 살짝 어둡게 (경계선이 아니라 은은한 길처럼)
+          base = this.palette.lot
+          shade = lotShade(wx, wz, seed) * 0.84
         } else if (kind === 'parking') {
           base = this.palette.lot
           shade = lotShade(wx, wz, seed) * 0.93
