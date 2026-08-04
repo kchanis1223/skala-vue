@@ -5,12 +5,22 @@ import { conditionToTheme } from '@/utils/weatherTheme'
 // 선택한 도시를 앱 전체(배경 테마, 나중엔 글라이더 게임)에서 써야 해서 스토어로 뺌
 export const useFlightStore = defineStore('flight', () => {
   const selectedCity = ref(null)
+  const previewTheme = ref(null)
 
-  const themeKey = computed(() => conditionToTheme(selectedCity.value?.condition))
+  // 미리보기가 켜져있으면 그게 우선, 아니면 선택 도시의 날씨
+  const themeKey = computed(
+    () => previewTheme.value ?? conditionToTheme(selectedCity.value?.condition),
+  )
 
   const selectCity = (city) => {
     selectedCity.value = city
+    previewTheme.value = null
   }
 
-  return { selectedCity, themeKey, selectCity }
+  // 같은 버튼 또 누르면 미리보기 해제
+  const togglePreview = (key) => {
+    previewTheme.value = previewTheme.value === key ? null : key
+  }
+
+  return { selectedCity, previewTheme, themeKey, selectCity, togglePreview }
 })

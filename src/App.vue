@@ -4,6 +4,7 @@ import { RouterLink, RouterView } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import UnitToggler from '@/components/exercise/UnitToggler.vue'
 import WeatherThemeBackground from '@/components/WeatherThemeBackground.vue'
+import ThemePreviewDock from '@/components/ThemePreviewDock.vue'
 import { useFlightStore } from '@/stores/flightStore'
 import { THEMES } from '@/utils/weatherTheme'
 
@@ -22,6 +23,7 @@ const nameParticle = computed(() => {
 
 <template>
   <WeatherThemeBackground :theme-key="themeKey" />
+  <ThemePreviewDock />
 
   <header class="app-header">
     <RouterLink to="/" class="brand">🪁 웨더글라이더</RouterLink>

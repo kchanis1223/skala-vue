@@ -1,6 +1,8 @@
 <script setup>
+import { computed } from 'vue'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
+import { THEMES, conditionToTheme } from '@/utils/weatherTheme'
 
 const props = defineProps({
   cityItem: { type: Object, required: true },
@@ -10,6 +12,9 @@ const emit = defineEmits(['select-card', 'click-detail'])
 
 const configStore = useConfigStore()
 const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
+const { displayTemp: displayFeels } = useDisplayTemp(() => props.cityItem.feelsLike)
+
+const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condition)].emoji)
 </script>
 
 <template>
@@ -19,23 +24,33 @@ const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
       <el-tag size="small" effect="plain">{{ cityItem.status }}</el-tag>
     </div>
 
-    <p class="temp">{{ displayTemp }}{{ configStore.unitSymbol }}</p>
+    <p class="temp">
+      <span class="weather-emoji">{{ weatherEmoji }}</span>
+      {{ displayTemp }}{{ configStore.unitSymbol }}
+    </p>
 
     <!-- 25도 기준 라벨. 화씨로 바꿔도 기준은 섭씨 원본값으로 -->
-    <p v-if="cityItem.temp >= 25" class="temp-label hot">🔥 더움 (25도 이상)</p>
-    <p v-else class="temp-label cool">❄️ 선선함 (25도 미만)</p>
+    <span v-if="cityItem.temp >= 25" class="temp-badge hot">🔥 더움 (25도 이상)</span>
+    <span v-else class="temp-badge cool">❄️ 선선함 (25도 미만)</span>
+
+    <p v-if="cityItem.feelsLike != null" class="card-extra">
+      체감 {{ displayFeels }}{{ configStore.unitSymbol }} · 습도 {{ cityItem.humidity }}% · 바람
+      {{ cityItem.windSpeed }}m/s
+    </p>
 
     <!-- .stop 안 붙이면 카드 클릭(select-card)까지 같이 터짐 -->
-    <el-button size="small" plain @click.stop="emit('click-detail', cityItem)">
-      상세보기
-    </el-button>
+    <button class="detail-btn" @click.stop="emit('click-detail', cityItem)">
+      상세보기 <span class="detail-arrow">→</span>
+    </button>
   </article>
 </template>
 
 <style scoped>
 .weather-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid #e4e7ed;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 16px 18px;
   cursor: pointer;
   transition:
@@ -46,37 +61,93 @@ const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
 
 .weather-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.18);
 }
 
 .card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .city-name {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .temp {
-  margin: 10px 0 4px;
+  margin: 10px 0 8px;
   font-size: 1.8rem;
   font-weight: 700;
   color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.temp-label {
-  margin: 0 0 12px;
+.weather-emoji {
+  font-size: 1.4rem;
+}
+
+.temp-badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.temp-badge.hot {
+  color: #d84315;
+  background: rgba(244, 108, 60, 0.12);
+}
+
+.temp-badge.cool {
+  color: #1565c0;
+  background: rgba(64, 158, 255, 0.12);
+}
+
+.card-extra {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #909399;
+}
+
+.detail-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 0;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  background: #fff;
+  color: #606266;
   font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
 
-.temp-label.hot {
-  color: #f56c6c;
+.detail-btn:hover {
+  background: linear-gradient(90deg, #409eff, #66b1ff);
+  border-color: transparent;
+  color: #fff;
 }
 
-.temp-label.cool {
-  color: #409eff;
+.detail-arrow {
+  transition: transform 0.2s;
+}
+
+.detail-btn:hover .detail-arrow {
+  transform: translateX(4px);
 }
 </style>

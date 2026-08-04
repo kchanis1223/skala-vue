@@ -4,12 +4,33 @@ import axios from 'axios'
 const API_KEY = import.meta.env.VITE_OWM_API_KEY
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
 
+// api가 주는 description은 "약간의 구름이 낀 하늘", "튼구름" 같이 제각각이라 우리 식으로 통일
+const toStatusLabel = (main, cloudsPct) => {
+  switch (main) {
+    case 'Clear':
+      return '맑음'
+    case 'Clouds':
+      return cloudsPct >= 75 ? '흐림' : '구름조금'
+    case 'Rain':
+      return '비'
+    case 'Drizzle':
+      return '이슬비'
+    case 'Thunderstorm':
+      return '뇌우'
+    case 'Snow':
+      return '눈'
+    default:
+      return '안개' // Mist/Fog/Haze 등 나머지는 전부 안개 취급
+  }
+}
+
 // openweathermap 응답에서 우리가 쓸 것만 추림
 // 바람/구름/일출일몰은 나중에 글라이더 게임에서 쓸 예정이라 미리 담아둠
 const toCityWeather = (city, data) => ({
   ...city,
   temp: Math.round(data.main.temp),
-  status: data.weather[0]?.description ?? city.status,
+  feelsLike: Math.round(data.main.feels_like),
+  status: toStatusLabel(data.weather[0]?.main, data.clouds?.all ?? 0),
   condition: data.weather[0]?.main ?? city.condition,
   humidity: data.main.humidity,
   windSpeed: data.wind?.speed ?? 0,

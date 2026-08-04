@@ -71,6 +71,7 @@ const goGlider = () => {
       <p v-else class="detail-label">❄️ 선선함 (25도 미만)</p>
 
       <ul class="detail-info">
+        <li v-if="cityInfo.feelsLike != null">🌡️ 체감 {{ cityInfo.feelsLike }}℃</li>
         <li v-if="cityInfo.windSpeed != null">💨 바람 {{ cityInfo.windSpeed }}m/s</li>
         <li v-if="cityInfo.humidity != null">💧 습도 {{ cityInfo.humidity }}%</li>
         <li v-if="pmGrade">
