@@ -1,12 +1,15 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { cityList } from '@/data/cities'
+import { useCityStore } from '@/stores/cityStore'
 
 const route = useRoute()
+const cityStore = useCityStore()
 
 // /glider?city=city_01 이런 식으로 출발 도시 받음
-const departureCity = computed(() => cityList.find((city) => city.id === route.query.city) ?? null)
+const departureCity = computed(
+  () => cityStore.allCities.find((city) => city.id === route.query.city) ?? null,
+)
 </script>
 
 <template>

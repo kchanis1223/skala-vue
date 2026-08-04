@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { cityList } from '@/data/cities'
+import { useCityStore } from '@/stores/cityStore'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
@@ -12,13 +12,14 @@ const router = useRouter()
 const configStore = useConfigStore()
 const { isLoading, usingMock, fetchCityDetail } = useWeatherApi()
 const flightStore = useFlightStore()
+const cityStore = useCityStore()
 
 const cityInfo = ref(null)
 const notFound = ref(false)
 
 // 마운트될 때 url의 cityId로 도시 찾고 실제 날씨 + 미세먼지 가져옴
 onMounted(async () => {
-  const baseCity = cityList.find((city) => city.id === route.params.cityId)
+  const baseCity = cityStore.allCities.find((city) => city.id === route.params.cityId)
   if (!baseCity) {
     notFound.value = true
     return

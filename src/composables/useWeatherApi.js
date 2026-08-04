@@ -54,6 +54,22 @@ export const useWeatherApi = () => {
     return toCityWeather(city, data)
   }
 
+  // 도시 추가용 geocoding 검색. 한글 이름 있으면 그걸로
+  const searchCities = async (query) => {
+    if (!API_KEY) return []
+    const { data } = await axios.get('https://api.openweathermap.org/geo/1.0/direct', {
+      params: { q: query, limit: 5, appid: API_KEY },
+    })
+    return data.map((place) => ({
+      name: place.local_names?.ko ?? place.name,
+      enName: place.name,
+      country: place.country,
+      state: place.state,
+      lat: place.lat,
+      lon: place.lon,
+    }))
+  }
+
   const fetchPm25 = async (city) => {
     const { data } = await axios.get(`${BASE_URL}/air_pollution`, {
       params: { lat: city.lat, lon: city.lon, appid: API_KEY },
@@ -105,5 +121,5 @@ export const useWeatherApi = () => {
     }
   }
 
-  return { isLoading, error, usingMock, fetchAllCities, fetchCityDetail }
+  return { isLoading, error, usingMock, fetchAllCities, fetchCityDetail, searchCities }
 }

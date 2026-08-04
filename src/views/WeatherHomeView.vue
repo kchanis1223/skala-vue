@@ -6,7 +6,7 @@ import WeatherParent from '@/components/exercise/WeatherParent.vue'
   <div class="home-view">
     <header class="hero">
       <h1 class="hero-title">🪁 웨더글라이더</h1>
-      <p class="hero-sub">도시를 고르면, 그 도시의 오늘 날씨 속을 날 수 있습니다.</p>
+      <p class="hero-sub">도시를 선택하고 날씨를 느껴보세요!</p>
     </header>
 
     <WeatherParent />
@@ -25,6 +25,6 @@ import WeatherParent from '@/components/exercise/WeatherParent.vue'
 
 .hero-sub {
   margin: 6px 0 0;
-  color: #909399;
+  color: #1e2023;
 }
 </style>

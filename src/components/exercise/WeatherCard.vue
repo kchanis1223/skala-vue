@@ -8,7 +8,7 @@ const props = defineProps({
   cityItem: { type: Object, required: true },
 })
 
-const emit = defineEmits(['select-card', 'click-detail'])
+const emit = defineEmits(['select-card', 'click-detail', 'remove-card'])
 
 const configStore = useConfigStore()
 const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
@@ -21,7 +21,18 @@ const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condi
   <article class="weather-card" @click="emit('select-card', cityItem)">
     <div class="card-head">
       <h3 class="city-name">{{ cityItem.flag }} {{ cityItem.name }}</h3>
-      <el-tag size="small" effect="plain">{{ cityItem.status }}</el-tag>
+      <div class="head-right">
+        <el-tag size="small" effect="plain">{{ cityItem.status }}</el-tag>
+        <!-- 직접 추가한 도시만 지울 수 있음 -->
+        <button
+          v-if="cityItem.custom"
+          class="remove-btn"
+          title="도시 삭제"
+          @click.stop="emit('remove-card', cityItem)"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <p class="temp">
@@ -69,6 +80,30 @@ const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condi
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.remove-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #f0f2f5;
+  color: #909399;
+  font-size: 0.7rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.remove-btn:hover {
+  background: #f56c6c;
+  color: #fff;
 }
 
 .city-name {
