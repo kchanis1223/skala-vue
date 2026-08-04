@@ -6,9 +6,11 @@ import SearchBar from './SearchBar.vue'
 import WeatherCard from './WeatherCard.vue'
 import { mockWeatherList } from '@/data/mockWeather'
 import { useWeatherApi } from '@/composables/useWeatherApi'
+import { useFlightStore } from '@/stores/flightStore'
 
 const router = useRouter()
 const { isLoading, usingMock, fetchAllCities } = useWeatherApi()
+const flightStore = useFlightStore()
 
 // 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
 const weatherList = ref([...mockWeatherList])
@@ -43,6 +45,8 @@ const updateQuery = (query) => {
 
 const selectCard = (city) => {
   selectedCityInfo.value = city
+  // 배경 테마도 선택한 도시 날씨로 바뀌게 스토어에도 올림
+  flightStore.selectCity(city)
 }
 
 // 상세보기는 원래 alert였는데 라우터 배우고 페이지 이동으로 바꿈
@@ -65,14 +69,6 @@ const goDetail = (city) => {
         :closable="false"
         title="지금은 예시 데이터입니다. API 연결이 안돼서 실제 날씨가 아니에요."
       />
-      <el-alert
-        v-if="selectedCityInfo"
-        class="status-bar"
-        type="info"
-        :closable="false"
-        :title="`${selectedCityInfo.name}이 선택되었습니다.`"
-      />
-
       <el-skeleton v-if="isLoading" :rows="3" animated />
 
       <template v-else>

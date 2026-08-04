@@ -10,6 +10,7 @@ const toCityWeather = (city, data) => ({
   ...city,
   temp: Math.round(data.main.temp),
   status: data.weather[0]?.description ?? city.status,
+  condition: data.weather[0]?.main ?? city.condition,
   humidity: data.main.humidity,
   windSpeed: data.wind?.speed ?? 0,
   windDeg: data.wind?.deg ?? 0,

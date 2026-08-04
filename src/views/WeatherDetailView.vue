@@ -5,11 +5,13 @@ import { mockWeatherList } from '@/data/mockWeather'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
+import { useFlightStore } from '@/stores/flightStore'
 
 const route = useRoute()
 const router = useRouter()
 const configStore = useConfigStore()
 const { isLoading, usingMock, fetchCityDetail } = useWeatherApi()
+const flightStore = useFlightStore()
 
 const cityInfo = ref(null)
 const notFound = ref(false)
@@ -23,6 +25,8 @@ onMounted(async () => {
   }
   cityInfo.value = baseCity
   cityInfo.value = await fetchCityDetail(baseCity)
+  // 상세 페이지 들어와도 배경 테마 맞춰줌
+  flightStore.selectCity(cityInfo.value)
 })
 
 const { displayTemp } = useDisplayTemp(() => cityInfo.value?.temp)
