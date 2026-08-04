@@ -1,17 +1,25 @@
 <script setup>
-import { ref, computed, watch, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseDashboardCard from './BaseDashboardCard.vue'
 import SearchBar from './SearchBar.vue'
 import WeatherCard from './WeatherCard.vue'
 import { mockWeatherList } from '@/data/mockWeather'
+import { useWeatherApi } from '@/composables/useWeatherApi'
 
 const router = useRouter()
+const { isLoading, usingMock, fetchAllCities } = useWeatherApi()
 
 // 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
 const weatherList = ref([...mockWeatherList])
 const searchQuery = ref('')
 const selectedCityInfo = ref(null)
+
+const loadWeather = async () => {
+  weatherList.value = await fetchAllCities(mockWeatherList)
+}
+
+onMounted(loadWeather)
 
 // 검색어가 도시 이름에 들어있는 것만 필터
 const filteredWeatherList = computed(() => {
@@ -51,6 +59,13 @@ const goDetail = (city) => {
 
     <BaseDashboardCard title="🌏 도시별 날씨">
       <el-alert
+        v-if="usingMock"
+        class="status-bar"
+        type="warning"
+        :closable="false"
+        title="지금은 예시 데이터입니다. API 연결이 안돼서 실제 날씨가 아니에요."
+      />
+      <el-alert
         v-if="selectedCityInfo"
         class="status-bar"
         type="info"
@@ -58,16 +73,24 @@ const goDetail = (city) => {
         :title="`${selectedCityInfo.name}이 선택되었습니다.`"
       />
 
-      <div v-if="filteredWeatherList.length > 0" class="card-grid">
-        <WeatherCard
-          v-for="city in filteredWeatherList"
-          :key="city.id"
-          :city-item="city"
-          @select-card="selectCard"
-          @click-detail="goDetail"
-        />
-      </div>
-      <el-empty v-else description="일치하는 도시가 없습니다" />
+      <el-skeleton v-if="isLoading" :rows="3" animated />
+
+      <template v-else>
+        <div v-if="filteredWeatherList.length > 0" class="card-grid">
+          <WeatherCard
+            v-for="city in filteredWeatherList"
+            :key="city.id"
+            :city-item="city"
+            @select-card="selectCard"
+            @click-detail="goDetail"
+          />
+        </div>
+        <el-empty v-else description="일치하는 도시가 없습니다" />
+
+        <div class="refresh-row">
+          <el-button size="small" text @click="loadWeather">🔄 날씨 새로고침</el-button>
+        </div>
+      </template>
     </BaseDashboardCard>
   </div>
 </template>
@@ -81,5 +104,10 @@ const goDetail = (city) => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
+}
+
+.refresh-row {
+  margin-top: 14px;
+  text-align: right;
 }
 </style>
