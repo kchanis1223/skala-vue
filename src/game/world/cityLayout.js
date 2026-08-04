@@ -46,14 +46,17 @@ export const worldFromLogical = (lx, lz, seed = 0) => {
   return { x: lx - wx, z: lz - wz }
 }
 
-// 블록 타입: 건물 / 공원 / 공터 / 주차장
-export const blockType = (bx, bz, seed = 0, parkProb = 0.15, plazaProb = 0.09) => {
+// 블록 타입: 건물 / 공터 / 주차장 (공원은 블록이 아니라 노이즈 필드로 따로 정함)
+export const blockType = (bx, bz, seed = 0, plazaProb = 0.09) => {
   const r = hash(bx * 3 + 11 + seed, bz * 7 + 5 - seed)
-  if (r < parkProb) return 'park'
-  if (r < parkProb + plazaProb) return 'plaza'
-  if (r < parkProb + plazaProb + 0.05) return 'parking'
+  if (r < plazaProb) return 'plaza'
+  if (r < plazaProb + 0.05) return 'parking'
   return 'build'
 }
+
+// 공원은 격자랑 무관한 연속 노이즈 얼룩. 도시의 parkProb가 높을수록 넓어짐
+export const parkAt = (lx, lz, seed = 0, style = null) =>
+  noise2d(lx, lz, 260, seed + 321) > 0.8 - (style?.parkProb ?? 0.15) * 0.8
 
 // 도로 위계: 몇 줄에 하나씩 넓은 대로, 나머지는 골목
 // 골목은 구간(블록 경계)마다 없기도 해서 블록들이 합쳐진 것처럼 보임
@@ -79,16 +82,53 @@ export const roadAt = (lx, lz, seed = 0) => {
   return false
 }
 
-// 부지 바닥 명암: 블록마다 톤이 다르고 건물 발밑엔 어두운 기초 패드
-export const lotShade = (lx, lz, seed = 0) => {
-  const bx = blockIndex(lx)
-  const bz = blockIndex(lz)
-  const jitter = 0.9 + blockSeed(bx, bz, seed, 31) * 0.18
+// 부지 바닥 명암: 블록 경계 없이 연속 노이즈로 얼룩덜룩하게
+export const lotShade = (x, z, seed = 0) => {
+  const broad = noise2d(x, z, 70, seed + 41)
+  const fine = noise2d(x, z, 11, seed + 87)
+  return 0.86 + broad * 0.2 + fine * 0.08
+}
+
+// 이 블록에 설 건물의 계획(위치/크기). 지형의 기초 패드랑 실제 건물이 똑같이 계산함
+export const buildingPlan = (bx, bz, seed = 0, style = null) => {
+  if (blockType(bx, bz, seed, style?.plazaProb) !== 'build') return null
   const cx = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
   const cz = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
-  const padHalf = (BLOCK - ROAD_W) * 0.33
-  const inPad = Math.abs(lx - cx) < padHalf && Math.abs(lz - cz) < padHalf
-  return inPad ? jitter * 0.8 : jitter
+  if (Math.hypot(cx, cz) < 55) return null // 발사 타워 자리
+  if (inSea(cx, cz, seed, style)) return null
+  if (style?.coast && cx > seaStartX(cz, seed) - 30) return null
+  if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < RIVER_HALF + 12) return null
+  if (parkAt(cx, cz, seed, style)) return null
+
+  const district = districtLevel(cx, cz, seed)
+  const r1 = blockSeed(bx, bz, seed)
+  const r2 = blockSeed(bx, bz, seed, 1)
+  const r3 = blockSeed(bx, bz, seed, 2)
+  const lowRatio = style?.lowriseRatio ?? 0.3
+  const isLow = r3 < (district > 0.6 ? lowRatio * 0.3 : lowRatio)
+
+  let h
+  let w
+  let d
+  if (isLow) {
+    h = 8 + r1 * 8
+    w = 20 + r2 * 9
+    d = 20 + r1 * 9
+  } else {
+    h =
+      (18 + Math.pow(district, style?.downtownPow ?? 1.6) * 140 * (0.45 + r1 * 0.55)) *
+      (style?.heightScale ?? 1)
+    w = 16 + r1 * 13
+    d = 16 + r2 * 13
+  }
+  return { cx, cz, w, d, h, isLow, district, r1, r2 }
+}
+
+// 건물 발자국(+약간의 여유)만큼만 어두운 기초 패드
+export const padAt = (lx, lz, seed = 0, style = null) => {
+  const plan = buildingPlan(blockIndex(lx), blockIndex(lz), seed, style)
+  if (!plan) return false
+  return Math.abs(lx - plan.cx) < plan.w / 2 + 1.5 && Math.abs(lz - plan.cz) < plan.d / 2 + 1.5
 }
 
 export const blockSeed = (bx, bz, seed = 0, salt = 0) =>
@@ -123,8 +163,9 @@ export const groundKind = (x, z, seed = 0, style = null) => {
   // 도로선은 강 위에서도 이어져서 다리가 됨
   if (style?.river && inRiver(lx, lz, seed)) return onRoad ? 'road' : 'water'
   if (onRoad) return 'road'
-  const type = blockType(blockIndex(lx), blockIndex(lz), seed, style?.parkProb, style?.plazaProb)
-  if (type === 'park') return 'park'
+  // 공원 얼룩이 격자 위에 얹힘 (도로만 그 위를 지나감)
+  if (parkAt(lx, lz, seed, style)) return 'park'
+  const type = blockType(blockIndex(lx), blockIndex(lz), seed, style?.plazaProb)
   if (type === 'parking') return 'parking'
   return 'lot'
 }

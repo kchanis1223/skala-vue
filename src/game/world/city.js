@@ -15,6 +15,8 @@ import {
   isMajorX,
   isMajorZ,
   MAJOR_W,
+  parkAt,
+  buildingPlan,
 } from './cityLayout'
 
 const RANGE = 2
@@ -260,13 +262,12 @@ export class CityField {
         if (style.river && Math.abs(logicalX - riverCenterX(logicalZ, seed)) < RIVER_HALF + 12)
           continue
 
-        const type = blockType(bx, bz, seed, style.parkProb, style.plazaProb)
         const { x: centerX, z: centerZ } = worldFromLogical(logicalX, logicalZ, seed)
         const ground = terrainHeight(centerX, centerZ)
         const district = districtLevel(logicalX, logicalZ, seed)
 
-        if (type === 'park') {
-          // 공원: 나무 + 덤불 + 가끔 연못
+        if (parkAt(logicalX, logicalZ, seed, style)) {
+          // 공원 얼룩: 나무 + 덤불 + 가끔 연못
           for (let t = 0; t < 5 && n.t < MAX_TREES; t++) {
             const p1 = blockSeed(bx, bz, seed, t + 4)
             const p2 = blockSeed(bx, bz, seed, t + 11)
@@ -288,6 +289,7 @@ export class CityField {
           continue
         }
 
+        const type = blockType(bx, bz, seed, style.plazaProb)
         if (type === 'parking') continue // 주차장은 빈 아스팔트
 
         if (type === 'plaza') {
@@ -331,24 +333,10 @@ export class CityField {
 
         if (n.b >= MAX_BUILDINGS - 1) continue
 
-        // 저층 상가 vs 타워. 다운타운에선 저층이 드묾
-        const lowChance = district > 0.6 ? style.lowriseRatio * 0.3 : style.lowriseRatio
-        const isLow = r3 < lowChance
-
-        let h
-        let w
-        let d
-        if (isLow) {
-          h = 8 + r1 * 8
-          w = 20 + r2 * 9
-          d = 20 + r1 * 9
-        } else {
-          h =
-            (18 + Math.pow(district, style.downtownPow) * 140 * (0.45 + r1 * 0.55)) *
-            style.heightScale
-          w = 16 + r1 * 13
-          d = 16 + r2 * 13
-        }
+        // 건물 크기/높이는 지형의 기초 패드랑 똑같이 계산되도록 공용 함수에서 가져옴
+        const plan = buildingPlan(bx, bz, seed, style)
+        if (!plan) continue
+        const { h, w, d, isLow } = plan
 
         const isGlass = !isLow && h > 45 && r4 < style.glassRatio
         const targetMesh = isGlass ? entry.glass : entry.buildings

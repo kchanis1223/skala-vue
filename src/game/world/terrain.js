@@ -7,6 +7,7 @@ import {
   riverCenterX,
   RIVER_HALF,
   lotShade,
+  padAt,
 } from './cityLayout'
 
 // 라이브러리 없이 해시 기반 밸류 노이즈로 언덕 높이 만들기
@@ -95,14 +96,17 @@ export class TerrainManager {
       pos.setY(i, terrainHeight(wx, wz))
       let c
       if (kind === 'road') c = this.road
-      else if (kind === 'park') c = this.park
+      else if (kind === 'park')
+        // 잔디도 얼룩덜룩하게
+        c = this.tmpColor.copy(this.park).multiplyScalar(0.88 + lotShade(wx, wz, seed + 5) * 0.2)
       else if (kind === 'water') c = this.water
       else if (kind === 'sand') c = this.sand
       else if (kind === 'parking') c = this.parking
       else {
-        // 부지는 블록마다 톤이 다르고 건물 발밑은 어둡게
+        // 부지는 연속 노이즈 명암 + 건물 발자국만큼 어두운 기초 패드
         const { lx, lz } = toLogical(wx, wz, seed)
-        c = this.tmpColor.copy(this.lot).multiplyScalar(lotShade(lx, lz, seed))
+        const pad = padAt(lx, lz, seed, this.style) ? 0.76 : 1
+        c = this.tmpColor.copy(this.lot).multiplyScalar(lotShade(wx, wz, seed) * pad)
       }
       colors.setXYZ(i, c.r, c.g, c.b)
     }
