@@ -11,7 +11,7 @@ node_modules
 .DS_Store
 dist
 
-# API 키 등 환경 변수 — Git 업로드 차단 (과제 단계 9 규정)
+# api 키 올라가면 안됨
 .env
 dist-ssr
 coverage

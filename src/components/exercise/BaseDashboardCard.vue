@@ -1,5 +1,5 @@
 <script setup>
-// 단계 3 필수 — 검색박스/리스트박스의 공통 디자인을 담당, 콘텐츠는 slot으로 주입받음
+// 검색박스랑 리스트박스 공통 틀. 내용은 slot으로 받음
 defineProps({
   title: { type: String, default: '' },
 })
@@ -8,7 +8,7 @@ defineProps({
 <template>
   <section class="dashboard-card">
     <h2 v-if="title" class="card-title">{{ title }}</h2>
-    <!-- Slot 콘텐츠는 부모(WeatherParent) 스코프에서 컴파일되므로 부모 상태와 직접 바인딩된다 -->
+    <!-- slot 안의 내용은 부모 스코프에서 컴파일돼서 부모 데이터 바로 쓸 수 있음 -->
     <slot></slot>
   </section>
 </template>

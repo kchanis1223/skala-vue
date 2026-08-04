@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// 전 라우트 지연 로딩(Lazy Loading) — 특히 /glider는 three.js 번들이 분리되어 효과가 큼
+// 라우트는 전부 lazy loading (glider 쪽은 three.js가 무거워서 특히 필요함)
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -30,7 +30,7 @@ const router = createRouter({
       component: () => import('@/views/WeatherAboutView.vue'),
     },
     {
-      // Catch-all Route — 정의되지 않은 모든 경로는 404 페이지로
+      // 없는 경로는 전부 404로
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),

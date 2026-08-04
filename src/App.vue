@@ -7,7 +7,7 @@ import UnitToggler from '@/components/exercise/UnitToggler.vue'
   <header class="app-header">
     <RouterLink to="/" class="brand">🪁 웨더글라이더</RouterLink>
 
-    <!-- 단계 4 필수 — Navigation Bar는 RouterLink 사용 (a 태그는 새로고침을 유발하므로 금지) -->
+    <!-- a 태그로 하면 새로고침돼서 RouterLink로 -->
     <nav class="app-nav">
       <RouterLink to="/">홈</RouterLink>
       <RouterLink to="/glider">글라이더</RouterLink>

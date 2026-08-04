@@ -1,5 +1,4 @@
 <script setup>
-// 단계 3 필수 — props로 검색어를 받고, 입력 시 update-query 이벤트를 emit
 defineProps({
   searchQuery: { type: String, required: true },
 })
@@ -13,7 +12,7 @@ const onInput = (event) => {
 
 <template>
   <div class="search-bar">
-    <!-- 한글 IME 조합 중에도 즉시 반영되도록 v-model 대신 :value + @input 사용 (강의 지침) -->
+    <!-- v-model 쓰면 한글 조합 중에 반영이 안돼서 :value + @input으로 처리 -->
     <input
       class="search-input"
       type="text"

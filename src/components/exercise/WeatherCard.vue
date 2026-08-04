@@ -2,7 +2,6 @@
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 
-// 단계 3 필수 — props로 도시 객체를 받고 select-card / click-detail 이벤트를 emit
 const props = defineProps({
   cityItem: { type: Object, required: true },
 })
@@ -22,11 +21,11 @@ const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
 
     <p class="temp">{{ displayTemp }}{{ configStore.unitSymbol }}</p>
 
-    <!-- 단계 1 필수 — 기온 25도 기준 v-if / v-else 라벨 (기준은 섭씨 원본값) -->
+    <!-- 25도 기준 라벨. 화씨로 바꿔도 기준은 섭씨 원본값으로 -->
     <p v-if="cityItem.temp >= 25" class="temp-label hot">🔥 더움 (25도 이상)</p>
     <p v-else class="temp-label cool">❄️ 선선함 (25도 미만)</p>
 
-    <!-- .stop — 카드의 select-card 클릭으로 버블링되지 않도록 차단 -->
+    <!-- .stop 안 붙이면 카드 클릭(select-card)까지 같이 터짐 -->
     <el-button size="small" plain @click.stop="emit('click-detail', cityItem)">
       상세보기
     </el-button>

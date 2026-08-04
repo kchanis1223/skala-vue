@@ -5,7 +5,7 @@ import { mockWeatherList } from '@/data/mockWeather'
 
 const route = useRoute()
 
-// /glider?city=city_01 형태로 출발 도시를 전달받는다
+// /glider?city=city_01 이런 식으로 출발 도시 받음
 const departureCity = computed(
   () => mockWeatherList.find((city) => city.id === route.query.city) ?? null,
 )
@@ -16,8 +16,8 @@ const departureCity = computed(
     <el-alert
       type="warning"
       :closable="false"
-      title="🚧 글라이더 게임은 마일스톤 4~5에서 구현됩니다"
-      description="이 페이지에 three.js 비행 씬이 들어갑니다. 선택한 도시의 실제 날씨(바람·강수·밤낮)가 비행 물리에 반영될 예정입니다."
+      title="🚧 글라이더 게임 준비중"
+      description="선택한 도시의 실제 날씨(바람, 비, 밤낮)에 따라 비행이 달라지는 게임을 만들 예정입니다."
     />
 
     <el-card v-if="departureCity" class="departure-card">

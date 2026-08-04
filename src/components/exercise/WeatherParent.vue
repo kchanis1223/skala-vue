@@ -8,23 +8,23 @@ import { mockWeatherList } from '@/data/mockWeather'
 
 const router = useRouter()
 
-// 단계 2·3 필수 — 모든 반응형 상태의 단일 소유자
+// 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
 const weatherList = ref([...mockWeatherList])
 const searchQuery = ref('')
 const selectedCityInfo = ref(null)
 
-// 단계 2 필수 — 검색어가 도시 이름에 포함된 항목만 필터링 (computed 캐싱)
+// 검색어가 도시 이름에 들어있는 것만 필터
 const filteredWeatherList = computed(() => {
   if (!searchQuery.value) return weatherList.value
   return weatherList.value.filter((city) => city.name.includes(searchQuery.value))
 })
 
-// 단계 2 필수 — watch: 선택 도시 변경 감시 (이전 값과 함께 추적)
+// 선택 도시 바뀔 때 확인용 로그
 watch(selectedCityInfo, (newCity, oldCity) => {
   console.log(`[watch] 선택 도시 변경: ${oldCity?.name ?? '없음'} → ${newCity?.name ?? '없음'}`)
 })
 
-// 단계 2 필수 — watchEffect: 검색어 타이핑 추적 (의존성 자동 추적 + 즉시 1회 실행)
+// watchEffect는 안에서 쓴 값을 알아서 추적함 (처음에 한 번 바로 실행됨)
 watchEffect(() => {
   console.log(`[watchEffect] 현재 검색어: "${searchQuery.value}"`)
 })
@@ -37,7 +37,7 @@ const selectCard = (city) => {
   selectedCityInfo.value = city
 }
 
-// 단계 4 필수 — 상세보기 alert 제거, 동적 경로로 이동
+// 상세보기는 원래 alert였는데 라우터 배우고 페이지 이동으로 바꿈
 const goDetail = (city) => {
   router.push(`/weather/${city.id}`)
 }

@@ -11,7 +11,7 @@ const configStore = useConfigStore()
 
 const cityInfo = ref(null)
 
-// 단계 4 필수 — Mount 시점에 동적 경로 파라미터(cityId)로 도시 조회
+// 마운트될 때 url의 cityId로 도시 찾기
 onMounted(() => {
   cityInfo.value = mockWeatherList.find((city) => city.id === route.params.cityId) ?? null
 })
