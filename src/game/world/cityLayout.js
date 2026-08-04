@@ -190,9 +190,9 @@ export const groundKind = (x, z, seed = 0, style = null) => {
     if (lx > s) return 'water'
     if (lx > s - 14) return 'sand'
   }
+  // 강 위엔 도로색을 안 칠함 (다리는 3D 모델로 따로 놓임)
+  if (style?.river && inRiver(lx, lz, seed)) return 'water'
   const road = roadAt(lx, lz, seed)
-  // 도로선은 강 위에서도 이어져서 다리가 됨
-  if (style?.river && inRiver(lx, lz, seed)) return road ? 'road' : 'water'
   if (road === 'major') return 'road'
   // 골목은 주변 부지색에 섞이는 은은한 길 (경계선처럼 안 보이게)
   if (road === 'minor') return 'alley'

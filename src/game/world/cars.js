@@ -79,7 +79,8 @@ export class CarField {
 
       const rotY =
         car.axis === 'x' ? (car.dir > 0 ? -Math.PI / 2 : Math.PI / 2) : car.dir > 0 ? Math.PI : 0
-      this.dummy.position.set(x, terrainHeight(x, z) + 0.75, z)
+      // 강 위(다리)에선 상판 높이로
+      this.dummy.position.set(x, Math.max(terrainHeight(x, z), 0.4) + 0.75, z)
       this.dummy.rotation.set(0, rotY, 0)
       this.dummy.scale.set(1, 1, 1)
       this.dummy.updateMatrix()

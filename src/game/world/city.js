@@ -13,6 +13,7 @@ import {
   isMajorX,
   isMajorZ,
   MAJOR_W,
+  inRiver,
   parkAt,
   buildingPlan,
   lineIndexX,
@@ -36,6 +37,8 @@ const MAX_TOWERS = 10
 const MAX_CRANES = 6 // 크레인 하나가 기둥+팔 2개
 const MAX_DASHES = 150
 const MAX_SHIPS = 5
+const MAX_BRIDGES = 6
+const BRIDGE_TOP = 1.0 // 다리 상판 높이
 const LAUNCH_HALF = 14
 
 const BILLBOARD_COLORS = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff8fab']
@@ -135,6 +138,8 @@ export class CityField {
     this.shipHullMat = new THREE.MeshLambertMaterial({ flatShading: true })
     this.shipCabinGeo = new THREE.BoxGeometry(3.2, 2.4, 4)
     this.shipCabinMat = new THREE.MeshLambertMaterial({ color: '#e8ecef' })
+    this.bridgeGeo = new THREE.BoxGeometry(1, 1, 1)
+    this.bridgeMat = new THREE.MeshLambertMaterial({ color: '#4a5158' })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -173,6 +178,7 @@ export class CityField {
       dashes: make(this.dashGeo, this.dashMat, MAX_DASHES),
       shipHulls: make(this.shipHullGeo, this.shipHullMat, MAX_SHIPS),
       shipCabins: make(this.shipCabinGeo, this.shipCabinMat, MAX_SHIPS),
+      bridges: make(this.bridgeGeo, this.bridgeMat, MAX_BRIDGES),
       boxes: [],
     }
   }
@@ -414,11 +420,59 @@ export class CityField {
       }
     }
 
-    // 중앙선 점선은 넓은 대로에만. 워프 적용해서 도로랑 같이 휘어짐
+    // 중앙선 점선은 넓은 대로에만. 워프 적용해서 도로랑 같이 휘어짐. 다리 위는 상판 높이로
     const putDash = (dlx, dlz, rotY) => {
       if (inSea(dlx, dlz, seed, style)) return
       const dw = worldFromLogical(dlx, dlz, seed)
-      this.place(entry.dashes, n.da++, dw.x, terrainHeight(dw.x, dw.z) + 0.12, dw.z, 1, 1, 1, rotY)
+      const onBridge = style.river && inRiver(dlx, dlz, seed)
+      const y = onBridge ? BRIDGE_TOP + 0.12 : terrainHeight(dw.x, dw.z) + 0.12
+      this.place(entry.dashes, n.da++, dw.x, y, dw.z, 1, 1, 1, rotY)
+    }
+
+    // 대로가 강을 건너는 자리엔 다리 상판을 놓음
+    let nBridge = 0
+    const putBridge = (lxc, lzc, len, alongX) => {
+      if (nBridge >= MAX_BRIDGES) return
+      const bw = worldFromLogical(lxc, lzc, seed)
+      this.place(
+        entry.bridges,
+        nBridge++,
+        bw.x,
+        BRIDGE_TOP - 0.6,
+        bw.z,
+        alongX ? len : MAJOR_W + 2,
+        1.2,
+        alongX ? MAJOR_W + 2 : len,
+      )
+    }
+    if (style.river) {
+      // 가로 대로(z=일정선)가 강을 x방향으로 건너는 경우
+      for (let k = lineIndexZ(oz - half, seed); k <= lineIndexZ(oz + half, seed); k++) {
+        if (!isMajorZ(k, seed)) continue
+        const lz0 = linePosZ(k, seed) + MAJOR_W / 2
+        if (lz0 < oz - half || lz0 >= oz + half) continue
+        const rx = riverCenterX(lz0, seed)
+        if (rx > ox - half - 30 && rx < ox + half + 30) {
+          putBridge(rx, lz0, RIVER_HALF * 2 + 20, true)
+        }
+      }
+      // 세로 대로(x=일정선)가 강을 z방향으로 건너는 경우
+      for (let k = lineIndexX(ox - half, seed); k <= lineIndexX(ox + half, seed); k++) {
+        if (!isMajorX(k, seed)) continue
+        const lx0 = linePosX(k, seed) + MAJOR_W / 2
+        if (lx0 < ox - half || lx0 >= ox + half) continue
+        let segStart = null
+        for (let z = oz - half; z <= oz + half + 8; z += 8) {
+          const crossing = z <= oz + half && Math.abs(lx0 - riverCenterX(z, seed)) < RIVER_HALF + 4
+          if (crossing && segStart === null) segStart = z
+          if (!crossing && segStart !== null) {
+            const mid = (segStart + z - 8) / 2
+            const len = Math.min(z - 8 - segStart + 24, 140)
+            putBridge(lx0, mid, len, false)
+            segStart = null
+          }
+        }
+      }
     }
     for (let k = lineIndexX(ox - half, seed); k <= lineIndexX(ox + half, seed); k++) {
       if (!isMajorX(k, seed)) continue
@@ -451,6 +505,7 @@ export class CityField {
     this.hideRest(entry.dashes, n.da, MAX_DASHES)
     this.hideRest(entry.shipHulls, n.sh, MAX_SHIPS)
     this.hideRest(entry.shipCabins, n.sh, MAX_SHIPS)
+    this.hideRest(entry.bridges, nBridge, MAX_BRIDGES)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -553,5 +608,7 @@ export class CityField {
     this.shipHullMat.dispose()
     this.shipCabinGeo.dispose()
     this.shipCabinMat.dispose()
+    this.bridgeGeo.dispose()
+    this.bridgeMat.dispose()
   }
 }
