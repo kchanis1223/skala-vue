@@ -7,9 +7,23 @@ const props = defineProps({
   hitFlash: { type: Boolean, default: false },
 })
 
-// 바람 화살표: 불어가는 방향을 가리키게 +180
+// 내 진행 방향 기준으로 바람이 어느 쪽에서 부는지 계산
+// relDeg 0 = 순풍(등 뒤에서 밀어줌), 180 = 역풍
+const relDeg = computed(() => {
+  const blowTo = (props.wind.deg + 180) % 360
+  return (blowTo - (props.tick.heading ?? 0) + 360) % 360
+})
+
+const windKind = computed(() => {
+  const off = Math.min(relDeg.value, 360 - relDeg.value)
+  if (props.wind.speed < 0.5) return { label: '무풍', cls: 'calm' }
+  if (off < 45) return { label: '순풍', cls: 'tail' }
+  if (off > 135) return { label: '역풍', cls: 'head' }
+  return { label: '측풍', cls: 'cross' }
+})
+
 const windArrowStyle = computed(() => ({
-  transform: `rotate(${(props.wind.deg + 180) % 360}deg)`,
+  transform: `rotate(${relDeg.value}deg)`,
 }))
 </script>
 
@@ -28,10 +42,10 @@ const windArrowStyle = computed(() => ({
       <span class="hud-value">{{ tick.distance.toLocaleString() }}m</span>
     </div>
     <div class="hud-item">
-      <span class="hud-label">바람</span>
-      <span class="hud-value">
+      <span class="hud-label">바람 {{ wind.speed }}m/s</span>
+      <span class="hud-value wind-value" :class="`wind-${windKind.cls}`">
         <span class="wind-arrow" :style="windArrowStyle">↑</span>
-        {{ wind.speed }}m/s
+        {{ windKind.label }}
       </span>
     </div>
     <div v-if="tick.hits > 0" class="hud-item">
@@ -78,7 +92,32 @@ const windArrowStyle = computed(() => ({
   font-weight: 700;
 }
 
+.wind-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .wind-arrow {
   display: inline-block;
+  font-size: 1.05rem;
+  transition: transform 0.2s;
+}
+
+/* 순풍=초록, 역풍=빨강, 측풍=주황 */
+.wind-tail {
+  color: #7ee08a;
+}
+
+.wind-head {
+  color: #ff8a80;
+}
+
+.wind-cross {
+  color: #ffd27a;
+}
+
+.wind-calm {
+  color: #cfd8dc;
 }
 </style>

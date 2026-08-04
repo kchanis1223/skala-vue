@@ -22,7 +22,7 @@ const pickedId = ref(route.query.city ?? null)
 const city = ref(null)
 const flightParams = ref(null)
 
-const emptyTick = () => ({ altitude: 0, speed: 0, distance: 0, time: 0, hits: 0 })
+const emptyTick = () => ({ altitude: 0, speed: 0, distance: 0, time: 0, hits: 0, heading: 0 })
 const tick = ref(emptyTick())
 const result = ref(null)
 const resultVisible = ref(false)

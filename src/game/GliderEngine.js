@@ -4,6 +4,7 @@ import { createInput } from './input'
 import { TerrainManager, terrainHeight } from './world/terrain'
 import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
+import { WindStreaks } from './world/streaks'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦
@@ -63,6 +64,7 @@ export class GliderEngine {
       params.precip > 0
         ? new Precipitation(this.scene, { type: params.precipType, intensity: params.precip })
         : null
+    this.streaks = new WindStreaks(this.scene)
 
     this.glider = buildGlider()
     this.scene.add(this.glider)
@@ -122,6 +124,15 @@ export class GliderEngine {
     this.terrain.update(s.pos.x, s.pos.z)
     this.precip?.update(s.pos, dt)
 
+    // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
+    const horiz = s.speed * Math.cos(s.pitch)
+    this.streaks.update(
+      s.pos,
+      this.params.wind,
+      { x: fx * horiz + this.params.wind.x, y: s.vy, z: fz * horiz + this.params.wind.z },
+      dt,
+    )
+
     // HUD는 10Hz면 충분
     this.tickTimer += dt
     if (this.tickTimer > 0.1) {
@@ -133,6 +144,8 @@ export class GliderEngine {
         distance: Math.round(s.distance),
         time: s.time,
         hits: s.hits,
+        // 나침반 방위 (0=북). yaw는 반시계라서 부호 뒤집음
+        heading: ((((-s.yaw * 180) / Math.PI) % 360) + 360) % 360,
       })
     }
 
@@ -160,6 +173,7 @@ export class GliderEngine {
     this.terrain.dispose()
     this.obstacles.dispose()
     this.precip?.dispose()
+    this.streaks.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
