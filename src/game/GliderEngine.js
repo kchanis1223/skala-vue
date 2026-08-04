@@ -4,7 +4,7 @@ import { createInput } from './input'
 import { TerrainManager, terrainHeight } from './world/terrain'
 import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
-import { WindStreaks } from './world/streaks'
+import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
 import { ObstacleField } from './world/obstacles'
 
@@ -67,6 +67,7 @@ export class GliderEngine {
         : null
     this.streaks = new WindStreaks(this.scene)
     this.trails = new WingtipTrails(this.scene)
+    this.gusts = new CrossGusts(this.scene)
 
     this.glider = buildGlider()
     this.scene.add(this.glider)
@@ -140,6 +141,7 @@ export class GliderEngine {
     // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
     const trailIntensity = Math.min(Math.max((s.speed - 10) / 22, 0) + Math.abs(s.roll), 1)
     this.trails.update(this.glider, trailIntensity)
+    this.gusts.update(this.glider.position, this.params.wind, s.crosswind ?? 0, dt)
 
     // HUD는 10Hz면 충분
     this.tickTimer += dt
@@ -183,6 +185,7 @@ export class GliderEngine {
     this.precip?.dispose()
     this.streaks.dispose()
     this.trails.dispose()
+    this.gusts.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()

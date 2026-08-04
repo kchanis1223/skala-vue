@@ -30,7 +30,8 @@ export const stepFlight = (state, input, env, dt) => {
   const fz0 = -Math.cos(state.yaw)
   const crosswind = env.wind.x * -fz0 + env.wind.z * fx0
   state.yaw += -crosswind * 0.02 * dt
-  const leanTarget = -input.turn * 0.6 + clamp(crosswind * 0.035, -0.25, 0.25)
+  // 바람이 미는 쪽 반대 날개가 들림 (바람이 날개 밑을 쳐서 얹혀가는 느낌)
+  const leanTarget = -input.turn * 0.6 - clamp(crosswind * 0.04, -0.25, 0.25)
   state.roll += (leanTarget - state.roll) * Math.min(dt * 6, 1)
   state.crosswind = crosswind
 
