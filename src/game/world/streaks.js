@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { Ribbon } from './ribbon'
 
 const BOX = 100 // 기체 주변 이 범위에서 기류 선을 돌려씀
 
@@ -75,80 +76,72 @@ export class WindStreaks {
   }
 }
 
-const GUST_BOX = 26
+const GUST_POINTS = 14
 
-// 측풍이 날개 아래를 치고 지나가는 걸 보여주는 짧은 기류 선들
-// 바람 불어오는 쪽 아래에서 생겨서 바람 따라 기체 밑을 스치고 사라짐
+// 측풍이 날개 아래를 치고 올라가는 잔결. 선 대신 얇은 리본이라 두께감이 있음
 export class CrossGusts {
-  constructor(scene, count = 14) {
-    this.scene = scene
-    this.count = count
-    this.bases = new Float32Array(count * 3)
-    this.ages = new Float32Array(count)
-    for (let i = 0; i < count; i++) this.ages[i] = Math.random() * 2
-
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 6), 3))
-    this.material = new THREE.LineBasicMaterial({
-      color: '#eaf6ff',
-      transparent: true,
-      opacity: 0,
-    })
-    this.lines = new THREE.LineSegments(geo, this.material)
-    this.lines.frustumCulled = false
-    scene.add(this.lines)
+  constructor(scene, count = 8) {
+    this.items = []
+    for (let i = 0; i < count; i++) {
+      this.items.push({
+        ribbon: new Ribbon(scene, GUST_POINTS, {
+          alphaFn: (t) => Math.sin(Math.PI * t),
+          widthFn: (t) => 0.14 + Math.sin(Math.PI * t) * 0.24,
+        }),
+        base: new THREE.Vector3(),
+        phase: Math.random() * Math.PI * 2,
+        age: 10, // 크게 시작해서 첫 프레임에 재배치되게
+        pts: Array.from({ length: GUST_POINTS }, () => new THREE.Vector3()),
+      })
+    }
   }
 
-  respawn(i, center, ux, uz) {
+  respawn(item, center, ux, uz) {
     // 바람 불어오는 쪽(-u)에서 시작, 날개보다 약간 아래
-    this.bases[i * 3] = center.x - ux * (10 + Math.random() * 10) + (Math.random() - 0.5) * GUST_BOX
-    this.bases[i * 3 + 1] = center.y - 2 - Math.random() * 4
-    this.bases[i * 3 + 2] =
-      center.z - uz * (10 + Math.random() * 10) + (Math.random() - 0.5) * GUST_BOX
-    this.ages[i] = 0
+    item.base.set(
+      center.x - ux * (9 + Math.random() * 12) + (Math.random() - 0.5) * 24,
+      center.y - 2 - Math.random() * 4,
+      center.z - uz * (9 + Math.random() * 12) + (Math.random() - 0.5) * 24,
+    )
+    item.age = 0
   }
 
-  update(center, wind, crosswind, dt) {
+  update(center, wind, crosswind, camPos, dt) {
     const strength = Math.min(Math.abs(crosswind) / 7, 1)
-    this.material.opacity = strength * 0.5
-    if (strength < 0.08) return
-
     const mag = Math.hypot(wind.x, wind.z) || 1
     const ux = wind.x / mag
     const uz = wind.z / mag
-    // 위로 비스듬히 치고 올라가는 방향
-    const len = 3.5
-    const dx = ux * len
-    const dy = 0.4 * len
-    const dz = uz * len
+    const px = -uz
+    const pz = ux
 
-    const pos = this.lines.geometry.attributes.position
-    for (let i = 0; i < this.count; i++) {
-      this.ages[i] += dt
+    for (const item of this.items) {
+      item.ribbon.material.opacity = strength * 0.45
+      if (strength < 0.08) continue
+
+      item.age += dt
+      item.phase += dt * 3
       // 바람보다 살짝 빠르게 흘러서 기체 밑을 스침
-      this.bases[i * 3] += wind.x * 2.2 * dt
-      this.bases[i * 3 + 1] += 0.8 * dt
-      this.bases[i * 3 + 2] += wind.z * 2.2 * dt
+      item.base.x += wind.x * 2 * dt
+      item.base.y += 0.7 * dt
+      item.base.z += wind.z * 2 * dt
 
-      const bx = this.bases[i * 3]
-      const bz = this.bases[i * 3 + 2]
-      const passed = (bx - center.x) * ux + (bz - center.z) * uz
-      if (passed > 14 || this.ages[i] > 3) this.respawn(i, center, ux, uz)
+      const passed = (item.base.x - center.x) * ux + (item.base.z - center.z) * uz
+      if (passed > 15 || item.age > 3) this.respawn(item, center, ux, uz)
 
-      pos.setXYZ(i * 2, this.bases[i * 3], this.bases[i * 3 + 1], this.bases[i * 3 + 2])
-      pos.setXYZ(
-        i * 2 + 1,
-        this.bases[i * 3] + dx,
-        this.bases[i * 3 + 1] + dy,
-        this.bases[i * 3 + 2] + dz,
-      )
+      for (let j = 0; j < GUST_POINTS; j++) {
+        const t = j / (GUST_POINTS - 1)
+        const wave = Math.sin(item.phase + j * 0.7) * 0.35
+        item.pts[j].set(
+          item.base.x + ux * j * 0.55 + px * wave,
+          item.base.y + t * 1.7, // 끝으로 갈수록 위로 쓸려 올라감
+          item.base.z + uz * j * 0.55 + pz * wave,
+        )
+      }
+      item.ribbon.rebuild(item.pts, camPos)
     }
-    pos.needsUpdate = true
   }
 
   dispose() {
-    this.scene.remove(this.lines)
-    this.lines.geometry.dispose()
-    this.material.dispose()
+    for (const item of this.items) item.ribbon.dispose()
   }
 }

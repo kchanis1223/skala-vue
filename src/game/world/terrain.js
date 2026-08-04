@@ -30,7 +30,7 @@ export const terrainHeight = (x, z) => {
   return big + small
 }
 
-const CHUNK = 220
+export const CHUNK = 220
 const SEGS = 22
 const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 

@@ -6,7 +6,7 @@ import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
 import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
-import { WindRibbons } from './world/windRibbons'
+import { ScatterField } from './world/scatter'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦
@@ -69,7 +69,7 @@ export class GliderEngine {
     this.streaks = new WindStreaks(this.scene)
     this.trails = new WingtipTrails(this.scene)
     this.gusts = new CrossGusts(this.scene)
-    this.windRibbons = new WindRibbons(this.scene)
+    this.scatter = new ScatterField(this.scene, { snowy: params.theme === 'snow' })
 
     this.glider = buildGlider()
     this.scene.add(this.glider)
@@ -136,6 +136,7 @@ export class GliderEngine {
     this.camera.updateProjectionMatrix()
 
     this.terrain.update(s.pos.x, s.pos.z)
+    this.scatter.update(s.pos.x, s.pos.z)
     this.precip?.update(s.pos, dt)
 
     // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
@@ -150,8 +151,13 @@ export class GliderEngine {
     // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
     const trailIntensity = Math.min(Math.max((s.speed - 10) / 22, 0) + Math.abs(s.roll), 1)
     this.trails.update(this.glider, this.camera.position, trailIntensity)
-    this.gusts.update(this.glider.position, this.params.wind, s.crosswind ?? 0, dt)
-    this.windRibbons.update(s.pos, this.params.wind, this.camera.position, dt)
+    this.gusts.update(
+      this.glider.position,
+      this.params.wind,
+      s.crosswind ?? 0,
+      this.camera.position,
+      dt,
+    )
 
     // HUD는 10Hz면 충분
     this.tickTimer += dt
@@ -196,7 +202,7 @@ export class GliderEngine {
     this.streaks.dispose()
     this.trails.dispose()
     this.gusts.dispose()
-    this.windRibbons.dispose()
+    this.scatter.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
