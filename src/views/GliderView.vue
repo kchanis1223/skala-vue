@@ -6,6 +6,7 @@ import { useFlightStore } from '@/stores/flightStore'
 import { useWeatherApi } from '@/composables/useWeatherApi'
 import { toFlightParams } from '@/game/weatherMapping'
 import GliderCanvas from '@/components/glider/GliderCanvas.vue'
+import CompassBar from '@/components/glider/CompassBar.vue'
 import FlightHud from '@/components/glider/FlightHud.vue'
 import FlightBriefing from '@/components/glider/FlightBriefing.vue'
 import FlightResultDialog from '@/components/glider/FlightResultDialog.vue'
@@ -132,6 +133,7 @@ const exitToSelect = () => {
         @end="onEnd"
         @hit="onHit"
       />
+      <CompassBar :heading="tick.heading" />
       <FlightHud :tick="tick" :wind="flightParams.wind" :hit-flash="hitFlash" />
     </div>
 

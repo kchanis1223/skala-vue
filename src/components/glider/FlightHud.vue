@@ -58,7 +58,7 @@ const windArrowStyle = computed(() => ({
 <style scoped>
 .hud {
   position: absolute;
-  top: 14px;
+  top: 48px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;

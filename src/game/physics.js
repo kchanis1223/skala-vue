@@ -46,7 +46,11 @@ export const stepFlight = (state, input, env, dt) => {
   // 하강률: 기본 + 비젖음 + 실속(저속에서 기수 들면 확 가라앉음)
   const stall = state.speed < 12 && state.pitch > 0.05 ? 3.5 : 0
   const sink = BASE_SINK * (1 + env.precip * 1.1) + stall
-  state.vy = state.speed * Math.sin(state.pitch) - sink
+
+  // 진행방향 바람 성분(+면 순풍): 순풍은 띄워주고 역풍은 아래로 눌러버림
+  const alongWind = env.wind.x * fx0 + env.wind.z * fz0
+  state.alongWind = alongWind
+  state.vy = state.speed * Math.sin(state.pitch) - sink + clamp(alongWind * 0.3, -2.2, 2.2)
 
   // yaw 기준 전진 방향 (-z가 정면)
   const fx = -Math.sin(state.yaw)

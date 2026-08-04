@@ -117,7 +117,9 @@ export class GliderEngine {
     const lift =
       Math.min(Math.abs(s.crosswind ?? 0) * 0.14, 1.3) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
     this.glider.position.set(s.pos.x, s.pos.y + lift, s.pos.z)
-    this.glider.rotation.set(s.pitch, s.yaw, s.roll)
+    // 순풍이면 기수가 살짝 들리고 역풍이면 눌림
+    const windPitch = THREE.MathUtils.clamp((s.alongWind ?? 0) * 0.012, -0.1, 0.1)
+    this.glider.rotation.set(s.pitch + windPitch, s.yaw, s.roll)
 
     // 카메라는 기체 뒤를 부드럽게 따라감
     const fx = -Math.sin(s.yaw)
