@@ -25,11 +25,12 @@ export const stepFlight = (state, input, env, dt) => {
   const turnGrip = 0.55 + 0.45 * Math.min(state.speed / 30, 1)
   state.yaw += input.turn * 1.5 * turnGrip * dt
 
-  // 측풍 성분(+면 오른쪽에서 밀림) → 밀리는 쪽으로 기체가 살짝 기울어짐
+  // 측풍 성분(+면 오른쪽으로 밀림) → 밀리는 쪽으로 기울고, 기수도 서서히 그쪽으로 돌아감
   const fx0 = -Math.sin(state.yaw)
   const fz0 = -Math.cos(state.yaw)
   const crosswind = env.wind.x * -fz0 + env.wind.z * fx0
-  const leanTarget = -input.turn * 0.6 + clamp(crosswind * 0.025, -0.2, 0.2)
+  state.yaw += -crosswind * 0.02 * dt
+  const leanTarget = -input.turn * 0.6 + clamp(crosswind * 0.035, -0.25, 0.25)
   state.roll += (leanTarget - state.roll) * Math.min(dt * 6, 1)
   state.crosswind = crosswind
 

@@ -112,18 +112,16 @@ export class GliderEngine {
       this.onHit?.()
     }
 
-    // 기체 위치/자세 반영
-    this.glider.position.set(s.pos.x, s.pos.y, s.pos.z)
+    // 기체 위치/자세 반영. 측풍 세기만큼 살짝 떠오르는 부유감 추가
+    const lift =
+      Math.min(Math.abs(s.crosswind ?? 0) * 0.14, 1.3) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
+    this.glider.position.set(s.pos.x, s.pos.y + lift, s.pos.z)
     this.glider.rotation.set(s.pitch, s.yaw, s.roll)
 
     // 카메라는 기체 뒤를 부드럽게 따라감
     const fx = -Math.sin(s.yaw)
     const fz = -Math.cos(s.yaw)
     const camTarget = new THREE.Vector3(s.pos.x - fx * 20, s.pos.y + 7, s.pos.z - fz * 20)
-    // 측풍이 밀면 카메라를 반대로 틀어서 기체가 화면에서 밀려나 보이게 함
-    const sway = THREE.MathUtils.clamp((s.crosswind ?? 0) * 0.9, -7, 7)
-    camTarget.x += -fz * -sway
-    camTarget.z += fx * -sway
     this.camera.position.lerp(camTarget, Math.min(dt * 4, 1))
     this.camera.lookAt(s.pos.x + fx * 18, s.pos.y, s.pos.z + fz * 18)
 
@@ -140,7 +138,7 @@ export class GliderEngine {
     )
 
     // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
-    const trailIntensity = Math.min(Math.max((s.speed - 14) / 30, 0) + Math.abs(s.roll) * 0.8, 1)
+    const trailIntensity = Math.min(Math.max((s.speed - 10) / 22, 0) + Math.abs(s.roll), 1)
     this.trails.update(this.glider, trailIntensity)
 
     // HUD는 10Hz면 충분

@@ -61,7 +61,7 @@ export class WingtipTrails {
     this.tmp.set(4.6, 0.8, 3).applyEuler(glider.rotation).add(glider.position)
     this.right.push(this.tmp)
 
-    const opacity = 0.1 + intensity * 0.55
+    const opacity = 0.3 + intensity * 0.65
     this.left.material.opacity = opacity
     this.right.material.opacity = opacity
   }
