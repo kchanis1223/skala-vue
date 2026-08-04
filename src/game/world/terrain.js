@@ -38,12 +38,14 @@ const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 
 // 청크를 풀로 돌려쓰면서 무한 도시 바닥처럼 보이게 함
 export class TerrainManager {
-  constructor(scene, { snowy = false } = {}) {
+  constructor(scene, { snowy = false, style = null } = {}) {
     this.scene = scene
-    // 도로 / 공원 / 건물 부지 바닥색
+    this.style = style
+    // 도로 / 공원 / 건물 부지 / 물 바닥색
     this.road = new THREE.Color(snowy ? '#565e66' : '#43494f')
     this.park = new THREE.Color(snowy ? '#c8d6cc' : '#5f9450')
-    this.lot = new THREE.Color(snowy ? '#e8edf1' : '#989ea6')
+    this.lot = new THREE.Color(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6'))
+    this.water = new THREE.Color(snowy ? '#a8c7d8' : '#3f7fae')
     this.pool = new Map() // "cx,cz" -> mesh
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
   }
@@ -54,12 +56,21 @@ export class TerrainManager {
     const colors = geo.attributes.color
     const ox = cx * CHUNK
     const oz = cz * CHUNK
+    const seed = this.style?.seed ?? 0
     for (let i = 0; i < pos.count; i++) {
       const wx = pos.getX(i) + ox
       const wz = pos.getZ(i) + oz
-      pos.setY(i, terrainHeight(wx, wz))
-      const kind = groundKind(wx, wz)
-      const c = kind === 'road' ? this.road : kind === 'park' ? this.park : this.lot
+      const kind = groundKind(wx, wz, seed, this.style)
+      // 물은 살짝 파여 보이게
+      pos.setY(i, terrainHeight(wx, wz) - (kind === 'water' ? 1.2 : 0))
+      const c =
+        kind === 'road'
+          ? this.road
+          : kind === 'park'
+            ? this.park
+            : kind === 'water'
+              ? this.water
+              : this.lot
       colors.setXYZ(i, c.r, c.g, c.b)
     }
     pos.needsUpdate = true

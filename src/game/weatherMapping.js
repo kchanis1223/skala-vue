@@ -1,4 +1,5 @@
 import { conditionToTheme } from '@/utils/weatherTheme'
+import { getCityStyle } from './world/cityStyles'
 
 // 도시의 실제 날씨를 게임 파라미터로 바꿔주는 핵심 파일
 // windDeg는 "바람이 불어오는 방향"이라서 +180 해서 부는 방향 벡터로 만듦
@@ -31,6 +32,8 @@ export const toFlightParams = (city) => {
     precip,
     precipType: theme === 'snow' ? 'snow' : 'rain',
     isNight,
+    // 도시별 생김새 (시드, 팔레트, 강 유무 등)
+    style: getCityStyle(city),
   }
 }
 

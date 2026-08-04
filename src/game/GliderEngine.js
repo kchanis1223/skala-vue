@@ -7,6 +7,7 @@ import { Precipitation } from './world/particles'
 import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
 import { CityField } from './world/city'
+import { CarField } from './world/cars'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
@@ -54,11 +55,16 @@ export class GliderEngine {
     this.camera = new THREE.PerspectiveCamera(66, 1, 0.1, 2000)
 
     this.sky = setupSky(this.scene, { theme: params.theme, isNight: params.isNight })
-    this.terrain = new TerrainManager(this.scene, { snowy: params.theme === 'snow' })
+    this.terrain = new TerrainManager(this.scene, {
+      snowy: params.theme === 'snow',
+      style: params.style,
+    })
     this.city = new CityField(this.scene, {
+      style: params.style,
       snowy: params.theme === 'snow',
       isNight: params.isNight,
     })
+    this.cars = new CarField(this.scene)
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
     this.state = createFlightState(this.city.launchTop + 5)
@@ -143,6 +149,7 @@ export class GliderEngine {
 
     this.terrain.update(s.pos.x, s.pos.z)
     this.city.update(s.pos.x, s.pos.z, s.time)
+    this.cars.update(s.pos, dt)
     this.precip?.update(s.pos, dt)
 
     // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
@@ -213,6 +220,7 @@ export class GliderEngine {
     this.trails.dispose()
     this.gusts.dispose()
     this.city.dispose()
+    this.cars.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
