@@ -61,70 +61,99 @@ export const terrainHeight = (x, z) => {
 }
 
 export const CHUNK = 220
-const SEGS = 60 // 정점이 촘촘해야 저공에서 도로 경계가 덜 뭉개짐
+const SEGS = 32 // 높이용 정점. 색은 텍스처가 담당해서 이 정도면 충분
+const TEX = 256 // 청크당 텍스처 해상도 (픽셀당 0.86m)
 const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 
 // 청크를 풀로 돌려쓰면서 무한 도시 바닥처럼 보이게 함
+// 바닥색은 정점색이 아니라 청크마다 캔버스 텍스처에 픽셀로 그림
+// (정점색은 보간 때문에 도로가 흐릿한 띠로 번져서 격자처럼 보였음)
 export class TerrainManager {
-  constructor(scene, { snowy = false, style = null } = {}) {
+  constructor(scene, { snowy = false, style = null, anisotropy = 4 } = {}) {
     this.scene = scene
     this.style = style
-    // 도로 / 공원 / 건물 부지 / 물 바닥색
-    this.road = new THREE.Color(snowy ? '#565e66' : '#43494f')
-    this.park = new THREE.Color(snowy ? '#c8d6cc' : '#5f9450')
-    this.lot = new THREE.Color(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6'))
-    this.water = new THREE.Color(snowy ? '#a8c7d8' : '#3f7fae')
-    this.sand = new THREE.Color(snowy ? '#ded8c8' : '#d8c58f')
-    this.parking = new THREE.Color(snowy ? '#767e86' : '#5b6167')
-    this.tmpColor = new THREE.Color()
-    this.pool = new Map() // "cx,cz" -> mesh
-    this.material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
-  }
-
-  buildChunk(mesh, cx, cz) {
-    const geo = mesh.geometry
-    const pos = geo.attributes.position
-    const colors = geo.attributes.color
-    const ox = cx * CHUNK
-    const oz = cz * CHUNK
-    const seed = this.style?.seed ?? 0
-    for (let i = 0; i < pos.count; i++) {
-      const wx = pos.getX(i) + ox
-      const wz = pos.getZ(i) + oz
-      const kind = groundKind(wx, wz, seed, this.style)
-      pos.setY(i, terrainHeight(wx, wz))
-      let c
-      if (kind === 'road') c = this.road
-      else if (kind === 'park')
-        // 잔디도 얼룩덜룩하게
-        c = this.tmpColor.copy(this.park).multiplyScalar(0.88 + lotShade(wx, wz, seed + 5) * 0.2)
-      else if (kind === 'water') c = this.water
-      else if (kind === 'sand') c = this.sand
-      else if (kind === 'parking')
-        // 주차장은 부지보다 아주 살짝만 어둡게 (패치로 안 보이게)
-        c = this.tmpColor.copy(this.lot).multiplyScalar(lotShade(wx, wz, seed) * 0.93)
-      else {
-        // 부지는 연속 노이즈 명암 (블록 경계 없음)
-        c = this.tmpColor.copy(this.lot).multiplyScalar(lotShade(wx, wz, seed))
-      }
-      colors.setXYZ(i, c.r, c.g, c.b)
+    this.anisotropy = anisotropy
+    const rgb = (hex) => {
+      const c = new THREE.Color(hex)
+      return [c.r * 255, c.g * 255, c.b * 255]
     }
-    pos.needsUpdate = true
-    colors.needsUpdate = true
-    geo.computeVertexNormals()
-    mesh.position.set(ox, 0, oz)
+    this.palette = {
+      road: rgb(snowy ? '#565e66' : '#43494f'),
+      park: rgb(snowy ? '#c8d6cc' : '#5f9450'),
+      lot: rgb(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6')),
+      water: rgb(snowy ? '#a8c7d8' : '#3f7fae'),
+      sand: rgb(snowy ? '#ded8c8' : '#d8c58f'),
+    }
+    this.pool = new Map() // "cx,cz" -> mesh
+    this.free = []
+    this.queue = []
+    this.queued = new Set()
   }
 
   makeMesh() {
     const geo = new THREE.PlaneGeometry(CHUNK, CHUNK, SEGS, SEGS)
     geo.rotateX(-Math.PI / 2)
-    geo.setAttribute(
-      'color',
-      new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 3), 3),
-    )
-    const mesh = new THREE.Mesh(geo, this.material)
+    const canvas = document.createElement('canvas')
+    canvas.width = TEX
+    canvas.height = TEX
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.anisotropy = this.anisotropy
+    const material = new THREE.MeshLambertMaterial({ map: texture, flatShading: true })
+    const mesh = new THREE.Mesh(geo, material)
+    mesh.userData.ctx = canvas.getContext('2d')
+    mesh.userData.texture = texture
     this.scene.add(mesh)
     return mesh
+  }
+
+  paint(mesh, ox, oz) {
+    const { ctx, texture } = mesh.userData
+    const img = ctx.createImageData(TEX, TEX)
+    const data = img.data
+    const seed = this.style?.seed ?? 0
+    const step = CHUNK / TEX
+    let p = 0
+    for (let j = 0; j < TEX; j++) {
+      const wz = oz - CHUNK / 2 + (j + 0.5) * step
+      for (let i = 0; i < TEX; i++) {
+        const wx = ox - CHUNK / 2 + (i + 0.5) * step
+        const kind = groundKind(wx, wz, seed, this.style)
+        let base
+        let shade = 1
+        if (kind === 'lot') {
+          base = this.palette.lot
+          shade = lotShade(wx, wz, seed)
+        } else if (kind === 'parking') {
+          base = this.palette.lot
+          shade = lotShade(wx, wz, seed) * 0.93
+        } else if (kind === 'park') {
+          base = this.palette.park
+          shade = 0.88 + lotShade(wx, wz, seed + 5) * 0.2
+        } else {
+          base = this.palette[kind]
+        }
+        data[p++] = base[0] * shade
+        data[p++] = base[1] * shade
+        data[p++] = base[2] * shade
+        data[p++] = 255
+      }
+    }
+    ctx.putImageData(img, 0, 0)
+    texture.needsUpdate = true
+  }
+
+  buildChunk(mesh, cx, cz) {
+    const geo = mesh.geometry
+    const pos = geo.attributes.position
+    const ox = cx * CHUNK
+    const oz = cz * CHUNK
+    for (let i = 0; i < pos.count; i++) {
+      pos.setY(i, terrainHeight(pos.getX(i) + ox, pos.getZ(i) + oz))
+    }
+    pos.needsUpdate = true
+    geo.computeVertexNormals()
+    mesh.position.set(ox, 0, oz)
+    this.paint(mesh, ox, oz)
   }
 
   update(px, pz) {
@@ -137,29 +166,41 @@ export class TerrainManager {
       }
     }
     // 안 쓰는 청크 회수
-    const free = []
     for (const [key, mesh] of this.pool) {
       if (!needed.has(key)) {
         this.pool.delete(key)
-        free.push(mesh)
+        this.free.push(mesh)
       }
     }
-    // 새로 필요한 자리 채우기
     for (const key of needed) {
-      if (this.pool.has(key)) continue
+      if (!this.pool.has(key) && !this.queued.has(key)) {
+        this.queue.push(key)
+        this.queued.add(key)
+      }
+    }
+    // 텍스처 그리기가 무거워서 프레임당 몇 개씩만 처리 (안 그러면 뚝뚝 끊김)
+    let budget = 3
+    while (budget > 0 && this.queue.length > 0) {
+      const key = this.queue.shift()
+      this.queued.delete(key)
+      if (this.pool.has(key) || !needed.has(key)) continue
       const [cx, cz] = key.split(',').map(Number)
-      const mesh = free.pop() ?? this.makeMesh()
+      const mesh = this.free.pop() ?? this.makeMesh()
       this.buildChunk(mesh, cx, cz)
       this.pool.set(key, mesh)
+      budget--
     }
   }
 
   dispose() {
-    for (const mesh of this.pool.values()) {
+    const all = [...this.pool.values(), ...this.free]
+    for (const mesh of all) {
       this.scene.remove(mesh)
       mesh.geometry.dispose()
+      mesh.userData.texture.dispose()
+      mesh.material.dispose()
     }
-    this.material.dispose()
     this.pool.clear()
+    this.free = []
   }
 }

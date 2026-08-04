@@ -61,6 +61,7 @@ export class GliderEngine {
     this.terrain = new TerrainManager(this.scene, {
       snowy: params.theme === 'snow',
       style: params.style,
+      anisotropy: this.renderer.capabilities.getMaxAnisotropy(),
     })
     this.city = new CityField(this.scene, {
       style: params.style,
