@@ -1,10 +1,10 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import { useFlightStore } from '@/stores/flightStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { THEMES } from '@/utils/weatherTheme'
 
-const flightStore = useFlightStore()
-const { previewTheme } = storeToRefs(flightStore)
+const themeStore = useThemeStore()
+const { previewTheme } = storeToRefs(themeStore)
 
 const previewKeys = ['clear', 'clouds', 'rain', 'snow', 'mist']
 </script>
@@ -18,7 +18,7 @@ const previewKeys = ['clear', 'clouds', 'rain', 'snow', 'mist']
       class="dock-btn"
       :class="{ active: previewTheme === key }"
       :title="`${THEMES[key].label} 테마 미리보기`"
-      @click="flightStore.togglePreview(key)"
+      @click="themeStore.togglePreview(key)"
     >
       {{ THEMES[key].emoji }}
     </button>

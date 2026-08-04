@@ -5,12 +5,12 @@ import { storeToRefs } from 'pinia'
 import UnitToggler from '@/components/exercise/UnitToggler.vue'
 import WeatherThemeBackground from '@/components/WeatherThemeBackground.vue'
 import ThemePreviewDock from '@/components/ThemePreviewDock.vue'
-import { useFlightStore } from '@/stores/flightStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { THEMES } from '@/utils/weatherTheme'
 
-const flightStore = useFlightStore()
+const themeStore = useThemeStore()
 // 스토어 구조분해는 storeToRefs로 해야 반응성이 안 깨짐
-const { selectedCity, themeKey } = storeToRefs(flightStore)
+const { selectedCity, themeKey } = storeToRefs(themeStore)
 
 // 도쿄"이" 처럼 어색해져서 받침 보고 이/가 붙임
 const nameParticle = computed(() => {
@@ -26,13 +26,11 @@ const nameParticle = computed(() => {
   <ThemePreviewDock />
 
   <header class="app-header">
-    <RouterLink to="/" class="brand">🪁 웨더글라이더</RouterLink>
+    <RouterLink to="/" class="brand">🌦️ 웨더보드</RouterLink>
 
     <!-- a 태그로 하면 새로고침돼서 RouterLink로 -->
     <nav class="app-nav">
       <RouterLink to="/">홈</RouterLink>
-      <RouterLink to="/glider">글라이더</RouterLink>
-      <RouterLink to="/records">기록실</RouterLink>
       <RouterLink to="/about">소개</RouterLink>
     </nav>
 

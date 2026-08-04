@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { cityList } from '@/data/cities'
 
-const STORAGE_KEY = 'weather-glider:custom-cities'
+const STORAGE_KEY = 'weather-board:custom-cities'
 
 // 국가코드(KR, US...)를 국기 이모지로 바꿔줌
 const countryFlag = (code = '') =>

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// 라우트는 전부 lazy loading (glider 쪽은 three.js가 무거워서 특히 필요함)
+// 라우트는 전부 lazy loading
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -13,16 +13,6 @@ const router = createRouter({
       path: '/weather/:cityId',
       name: 'weather-detail',
       component: () => import('@/views/WeatherDetailView.vue'),
-    },
-    {
-      path: '/glider',
-      name: 'glider',
-      component: () => import('@/views/GliderView.vue'),
-    },
-    {
-      path: '/records',
-      name: 'records',
-      component: () => import('@/views/RecordsView.vue'),
     },
     {
       path: '/about',

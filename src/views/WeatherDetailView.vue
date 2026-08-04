@@ -5,13 +5,13 @@ import { useCityStore } from '@/stores/cityStore'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
-import { useFlightStore } from '@/stores/flightStore'
+import { useThemeStore } from '@/stores/themeStore'
 
 const route = useRoute()
 const router = useRouter()
 const configStore = useConfigStore()
 const { isLoading, usingMock, fetchCityDetail } = useWeatherApi()
-const flightStore = useFlightStore()
+const themeStore = useThemeStore()
 const cityStore = useCityStore()
 
 const cityInfo = ref(null)
@@ -27,12 +27,12 @@ onMounted(async () => {
   cityInfo.value = baseCity
   cityInfo.value = await fetchCityDetail(baseCity)
   // 상세 페이지 들어와도 배경 테마 맞춰줌
-  flightStore.selectCity(cityInfo.value)
+  themeStore.selectCity(cityInfo.value)
 })
 
 const { displayTemp } = useDisplayTemp(() => cityInfo.value?.temp)
 
-// 미세먼지 등급 (환경부 기준 대충 참고함)
+// 미세먼지 등급 (환경부 기준 참고)
 const pmGrade = computed(() => {
   const pm = cityInfo.value?.pm25
   if (pm == null) return null
@@ -41,10 +41,6 @@ const pmGrade = computed(() => {
   if (pm <= 75) return { label: '나쁨', type: 'warning' }
   return { label: '매우나쁨', type: 'danger' }
 })
-
-const goGlider = () => {
-  router.push({ path: '/glider', query: { city: cityInfo.value.id } })
-}
 </script>
 
 <template>
@@ -83,8 +79,7 @@ const goGlider = () => {
       </ul>
 
       <div class="detail-actions">
-        <el-button type="primary" @click="goGlider">✈️ 이 날씨로 비행하기</el-button>
-        <el-button @click="router.push('/')">← 메인으로</el-button>
+        <el-button type="primary" @click="router.push('/')">← 메인으로</el-button>
       </div>
     </el-card>
 

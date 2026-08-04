@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-const STORAGE_KEY = 'weather-glider:unit'
+const STORAGE_KEY = 'weather-board:unit'
 
 // setup store 방식 (state는 ref, getters는 computed로)
 export const useConfigStore = defineStore('config', () => {

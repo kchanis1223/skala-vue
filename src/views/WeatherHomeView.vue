@@ -5,8 +5,8 @@ import WeatherParent from '@/components/exercise/WeatherParent.vue'
 <template>
   <div class="home-view">
     <header class="hero">
-      <h1 class="hero-title">🪁 웨더글라이더</h1>
-      <p class="hero-sub">도시를 선택하고 날씨를 느껴보세요!</p>
+      <h1 class="hero-title">🌦️ 웨더보드</h1>
+      <p class="hero-sub">세계 도시의 지금 날씨를 한눈에, 테마로 체감하세요!</p>
     </header>
 
     <WeatherParent />

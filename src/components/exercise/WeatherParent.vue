@@ -6,13 +6,13 @@ import SearchBar from './SearchBar.vue'
 import WeatherCard from './WeatherCard.vue'
 import AddCityDialog from '@/components/AddCityDialog.vue'
 import { useWeatherApi } from '@/composables/useWeatherApi'
-import { useFlightStore } from '@/stores/flightStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { useCityStore } from '@/stores/cityStore'
 import { conditionToTheme } from '@/utils/weatherTheme'
 
 const router = useRouter()
 const { isLoading, usingMock, fetchAllCities } = useWeatherApi()
-const flightStore = useFlightStore()
+const themeStore = useThemeStore()
 const cityStore = useCityStore()
 
 // 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
@@ -69,7 +69,7 @@ const updateQuery = (query) => {
 const selectCard = (city) => {
   selectedCityInfo.value = city
   // 배경 테마도 선택한 도시 날씨로 바뀌게 스토어에도 올림
-  flightStore.selectCity(city)
+  themeStore.selectCity(city)
 }
 
 // 상세보기는 원래 alert였는데 라우터 배우고 페이지 이동으로 바꿈
