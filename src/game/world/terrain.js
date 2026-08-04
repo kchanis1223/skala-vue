@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { groundKind } from './cityLayout'
 
 // 라이브러리 없이 해시 기반 밸류 노이즈로 언덕 높이 만들기
 const hash = (ix, iz) => {
@@ -23,23 +24,26 @@ const noise2d = (x, z, scale) => {
   return a + (b - a) * tx + (c - a + (a - b + d - c) * tx) * tz
 }
 
-// 지형 높이. 물리 충돌이랑 메쉬가 같은 함수를 써야 안 뚫림
+// 지형 높이. 도시라서 거의 평지고 살짝만 굽이침
+// 물리 충돌이랑 메쉬가 같은 함수를 써야 안 뚫림
 export const terrainHeight = (x, z) => {
-  const big = noise2d(x, z, 160) * 26
-  const small = noise2d(x + 999, z - 999, 48) * 6
+  const big = noise2d(x, z, 300) * 5
+  const small = noise2d(x + 999, z - 999, 60) * 1.5
   return big + small
 }
 
 export const CHUNK = 220
-const SEGS = 22
+const SEGS = 44 // 도로가 보이려면 정점이 촘촘해야 함
 const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 
-// 청크를 풀로 돌려쓰면서 무한 지형처럼 보이게 함
+// 청크를 풀로 돌려쓰면서 무한 도시 바닥처럼 보이게 함
 export class TerrainManager {
-  constructor(scene, { lowColor = '#79aa4e', highColor = '#8d6e63', snowy = false } = {}) {
+  constructor(scene, { snowy = false } = {}) {
     this.scene = scene
-    this.low = new THREE.Color(snowy ? '#dfe8ee' : lowColor)
-    this.high = new THREE.Color(snowy ? '#ffffff' : highColor)
+    // 도로 / 공원 / 건물 부지 바닥색
+    this.road = new THREE.Color(snowy ? '#565e66' : '#43494f')
+    this.park = new THREE.Color(snowy ? '#c8d6cc' : '#5f9450')
+    this.lot = new THREE.Color(snowy ? '#e8edf1' : '#989ea6')
     this.pool = new Map() // "cx,cz" -> mesh
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
   }
@@ -50,14 +54,13 @@ export class TerrainManager {
     const colors = geo.attributes.color
     const ox = cx * CHUNK
     const oz = cz * CHUNK
-    const tmp = new THREE.Color()
     for (let i = 0; i < pos.count; i++) {
       const wx = pos.getX(i) + ox
       const wz = pos.getZ(i) + oz
-      const h = terrainHeight(wx, wz)
-      pos.setY(i, h)
-      tmp.lerpColors(this.low, this.high, Math.min(h / 30, 1))
-      colors.setXYZ(i, tmp.r, tmp.g, tmp.b)
+      pos.setY(i, terrainHeight(wx, wz))
+      const kind = groundKind(wx, wz)
+      const c = kind === 'road' ? this.road : kind === 'park' ? this.park : this.lot
+      colors.setXYZ(i, c.r, c.g, c.b)
     }
     pos.needsUpdate = true
     colors.needsUpdate = true

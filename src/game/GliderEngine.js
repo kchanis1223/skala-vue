@@ -6,7 +6,7 @@ import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
 import { WindStreaks, CrossGusts } from './world/streaks'
 import { WingtipTrails } from './world/trails'
-import { ScatterField } from './world/scatter'
+import { CityField } from './world/city'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦
@@ -53,14 +53,21 @@ export class GliderEngine {
     this.scene = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera(68, 1, 0.1, 2000)
 
-    this.state = createFlightState(130)
-    this.input = createInput()
-
-    // 시작부터 기체 뒤에 카메라 배치 (안 그러면 지형 속에서 시작함)
-    this.camera.position.set(0, this.state.pos.y + 7, 20)
-
     this.sky = setupSky(this.scene, { theme: params.theme, isNight: params.isNight })
     this.terrain = new TerrainManager(this.scene, { snowy: params.theme === 'snow' })
+    this.city = new CityField(this.scene, {
+      snowy: params.theme === 'snow',
+      isNight: params.isNight,
+    })
+
+    // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
+    this.state = createFlightState(this.city.launchTop + 8)
+    this.state.pos.z = -22
+    this.input = createInput()
+
+    // 시작부터 기체 뒤에 카메라 배치 (안 그러면 건물 속에서 시작함)
+    this.camera.position.set(0, this.state.pos.y + 7, this.state.pos.z + 20)
+
     this.obstacles = new ObstacleField(this.scene)
     this.precip =
       params.precip > 0
@@ -69,10 +76,6 @@ export class GliderEngine {
     this.streaks = new WindStreaks(this.scene)
     this.trails = new WingtipTrails(this.scene)
     this.gusts = new CrossGusts(this.scene)
-    this.scatter = new ScatterField(this.scene, {
-      snowy: params.theme === 'snow',
-      isNight: params.isNight,
-    })
 
     this.glider = buildGlider()
     this.scene.add(this.glider)
@@ -139,7 +142,7 @@ export class GliderEngine {
     this.camera.updateProjectionMatrix()
 
     this.terrain.update(s.pos.x, s.pos.z)
-    this.scatter.update(s.pos.x, s.pos.z, s.time)
+    this.city.update(s.pos.x, s.pos.z, s.time)
     this.precip?.update(s.pos, dt)
 
     // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
@@ -178,16 +181,20 @@ export class GliderEngine {
       })
     }
 
-    // 착지 판정
-    const ground = terrainHeight(s.pos.x, s.pos.z)
-    if (s.pos.y <= ground + 1.2 && !this.finished) {
-      this.finished = true
-      this.running = false
-      this.onEnd?.({
-        distance: Math.round(s.distance),
-        duration: Math.round(s.time * 10) / 10,
-        hits: s.hits,
-      })
+    // 건물에 박으면 추락, 땅에 닿으면 착륙. 둘 다 게임 끝
+    if (!this.finished) {
+      const ground = terrainHeight(s.pos.x, s.pos.z)
+      const crashed = this.city.collides(s.pos.x, s.pos.y, s.pos.z)
+      if (crashed || s.pos.y <= ground + 1.2) {
+        this.finished = true
+        this.running = false
+        this.onEnd?.({
+          distance: Math.round(s.distance),
+          duration: Math.round(s.time * 10) / 10,
+          hits: s.hits,
+          crashed,
+        })
+      }
     }
 
     this.renderer.render(this.scene, this.camera)
@@ -205,7 +212,7 @@ export class GliderEngine {
     this.streaks.dispose()
     this.trails.dispose()
     this.gusts.dispose()
-    this.scatter.dispose()
+    this.city.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
