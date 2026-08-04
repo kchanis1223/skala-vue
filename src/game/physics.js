@@ -24,7 +24,14 @@ export const stepFlight = (state, input, env, dt) => {
   // 속도가 빠를수록 선회가 잘 먹힘
   const turnGrip = 0.55 + 0.45 * Math.min(state.speed / 30, 1)
   state.yaw += input.turn * 1.5 * turnGrip * dt
-  state.roll += (-input.turn * 0.6 - state.roll) * Math.min(dt * 6, 1)
+
+  // 측풍 성분(+면 오른쪽에서 밀림) → 밀리는 쪽으로 기체가 살짝 기울어짐
+  const fx0 = -Math.sin(state.yaw)
+  const fz0 = -Math.cos(state.yaw)
+  const crosswind = env.wind.x * -fz0 + env.wind.z * fx0
+  const leanTarget = -input.turn * 0.6 + clamp(crosswind * 0.025, -0.2, 0.2)
+  state.roll += (leanTarget - state.roll) * Math.min(dt * 6, 1)
+  state.crosswind = crosswind
 
   const targetPitch = input.pitch * 0.5
   state.pitch += (targetPitch - state.pitch) * Math.min(dt * 3.2, 1)

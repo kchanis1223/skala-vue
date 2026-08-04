@@ -1,14 +1,15 @@
-// 방향키 입력 상태 관리 (WASD도 같이 받아줌)
+// 방향키 + WASD 입력 상태 관리
+// e.code(물리 키 위치)로 받아서 한글 입력 모드에서도 wasd가 먹음
 export const createInput = () => {
   const pressed = new Set()
 
   const onKeyDown = (e) => {
     if (e.key.startsWith('Arrow')) e.preventDefault() // 화면 스크롤 방지
-    pressed.add(e.key.toLowerCase())
+    pressed.add(e.code)
   }
-  const onKeyUp = (e) => pressed.delete(e.key.toLowerCase())
+  const onKeyUp = (e) => pressed.delete(e.code)
 
-  const has = (...keys) => keys.some((k) => pressed.has(k))
+  const has = (...codes) => codes.some((c) => pressed.has(c))
 
   return {
     attach() {
@@ -21,10 +22,10 @@ export const createInput = () => {
       pressed.clear()
     },
     get turn() {
-      return (has('arrowleft', 'a') ? 1 : 0) - (has('arrowright', 'd') ? 1 : 0)
+      return (has('ArrowLeft', 'KeyA') ? 1 : 0) - (has('ArrowRight', 'KeyD') ? 1 : 0)
     },
     get pitch() {
-      return (has('arrowup', 'w') ? 1 : 0) - (has('arrowdown', 's') ? 1 : 0)
+      return (has('ArrowUp', 'KeyW') ? 1 : 0) - (has('ArrowDown', 'KeyS') ? 1 : 0)
     },
   }
 }

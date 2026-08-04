@@ -5,6 +5,7 @@ import { TerrainManager, terrainHeight } from './world/terrain'
 import { setupSky } from './world/sky'
 import { Precipitation } from './world/particles'
 import { WindStreaks } from './world/streaks'
+import { WingtipTrails } from './world/trails'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦
@@ -65,6 +66,7 @@ export class GliderEngine {
         ? new Precipitation(this.scene, { type: params.precipType, intensity: params.precip })
         : null
     this.streaks = new WindStreaks(this.scene)
+    this.trails = new WingtipTrails(this.scene)
 
     this.glider = buildGlider()
     this.scene.add(this.glider)
@@ -118,6 +120,10 @@ export class GliderEngine {
     const fx = -Math.sin(s.yaw)
     const fz = -Math.cos(s.yaw)
     const camTarget = new THREE.Vector3(s.pos.x - fx * 20, s.pos.y + 7, s.pos.z - fz * 20)
+    // 측풍이 밀면 카메라를 반대로 틀어서 기체가 화면에서 밀려나 보이게 함
+    const sway = THREE.MathUtils.clamp((s.crosswind ?? 0) * 0.9, -7, 7)
+    camTarget.x += -fz * -sway
+    camTarget.z += fx * -sway
     this.camera.position.lerp(camTarget, Math.min(dt * 4, 1))
     this.camera.lookAt(s.pos.x + fx * 18, s.pos.y, s.pos.z + fz * 18)
 
@@ -132,6 +138,10 @@ export class GliderEngine {
       { x: fx * horiz + this.params.wind.x, y: s.vy, z: fz * horiz + this.params.wind.z },
       dt,
     )
+
+    // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
+    const trailIntensity = Math.min(Math.max((s.speed - 14) / 30, 0) + Math.abs(s.roll) * 0.8, 1)
+    this.trails.update(this.glider, trailIntensity)
 
     // HUD는 10Hz면 충분
     this.tickTimer += dt
@@ -174,6 +184,7 @@ export class GliderEngine {
     this.obstacles.dispose()
     this.precip?.dispose()
     this.streaks.dispose()
+    this.trails.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.dispose()
