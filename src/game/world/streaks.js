@@ -36,8 +36,8 @@ export class WindStreaks {
     const az = wind.z - vel.z
     const mag = Math.hypot(ax, ay, az) || 1
     // 빠를수록 선이 길어지고 진해짐
-    const len = Math.min(mag * 0.22, 12)
-    this.material.opacity = 0.15 + Math.min(mag / 45, 1) * 0.42
+    const len = Math.min(mag * 0.28, 8)
+    this.material.opacity = 0.15 + Math.min(mag / 25, 1) * 0.42
     const dx = (ax / mag) * len
     const dy = (ay / mag) * len
     const dz = (az / mag) * len
@@ -86,7 +86,7 @@ export class CrossGusts {
       this.items.push({
         ribbon: new Ribbon(scene, GUST_POINTS, {
           alphaFn: (t) => Math.sin(Math.PI * t),
-          widthFn: (t) => 0.14 + Math.sin(Math.PI * t) * 0.24,
+          widthFn: (t) => 0.08 + Math.sin(Math.PI * t) * 0.16,
         }),
         base: new THREE.Vector3(),
         phase: Math.random() * Math.PI * 2,
@@ -99,9 +99,9 @@ export class CrossGusts {
   respawn(item, center, ux, uz) {
     // 바람 불어오는 쪽(-u)에서 시작, 날개보다 약간 아래
     item.base.set(
-      center.x - ux * (9 + Math.random() * 12) + (Math.random() - 0.5) * 24,
-      center.y - 2 - Math.random() * 4,
-      center.z - uz * (9 + Math.random() * 12) + (Math.random() - 0.5) * 24,
+      center.x - ux * (5 + Math.random() * 7) + (Math.random() - 0.5) * 14,
+      center.y - 1 - Math.random() * 2.5,
+      center.z - uz * (5 + Math.random() * 7) + (Math.random() - 0.5) * 14,
     )
     item.age = 0
   }
@@ -126,15 +126,15 @@ export class CrossGusts {
       item.base.z += wind.z * 2 * dt
 
       const passed = (item.base.x - center.x) * ux + (item.base.z - center.z) * uz
-      if (passed > 15 || item.age > 3) this.respawn(item, center, ux, uz)
+      if (passed > 9 || item.age > 3) this.respawn(item, center, ux, uz)
 
       for (let j = 0; j < GUST_POINTS; j++) {
         const t = j / (GUST_POINTS - 1)
-        const wave = Math.sin(item.phase + j * 0.7) * 0.35
+        const wave = Math.sin(item.phase + j * 0.7) * 0.25
         item.pts[j].set(
-          item.base.x + ux * j * 0.55 + px * wave,
-          item.base.y + t * 1.7, // 끝으로 갈수록 위로 쓸려 올라감
-          item.base.z + uz * j * 0.55 + pz * wave,
+          item.base.x + ux * j * 0.4 + px * wave,
+          item.base.y + t * 1.2, // 끝으로 갈수록 위로 쓸려 올라감
+          item.base.z + uz * j * 0.4 + pz * wave,
         )
       }
       item.ribbon.rebuild(item.pts, camPos)

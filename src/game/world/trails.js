@@ -10,7 +10,7 @@ class TipTrail {
       // t=0이 날개끝(최신), 꼬리로 갈수록 흐려짐
       alphaFn: (t) => (1 - t) ** 1.4,
       // 날개끝에선 얇게 시작해서 부풀었다가 꼬리에서 가늘어지는 물방울 모양
-      widthFn: (t) => 0.08 + 1.05 * Math.pow(t, 0.35) * (1 - t * 0.8),
+      widthFn: (t) => 0.04 + 0.5 * Math.pow(t, 0.35) * (1 - t * 0.8),
     })
     this.pts = Array.from({ length: TRAIL_LEN }, () => new THREE.Vector3())
     this.primed = false
@@ -47,9 +47,9 @@ export class WingtipTrails {
   // glider: THREE.Group, intensity: 0~1 (속도/선회 반영)
   update(glider, camPos, intensity) {
     const opacity = 0.3 + intensity * 0.55
-    this.tmp.set(-4.6, 0.8, 3).applyEuler(glider.rotation).add(glider.position)
+    this.tmp.set(-1.7, 0.3, 1.1).applyEuler(glider.rotation).add(glider.position)
     this.left.update(this.tmp, camPos, opacity)
-    this.tmp.set(4.6, 0.8, 3).applyEuler(glider.rotation).add(glider.position)
+    this.tmp.set(1.7, 0.3, 1.1).applyEuler(glider.rotation).add(glider.position)
     this.right.update(this.tmp, camPos, opacity)
   }
 

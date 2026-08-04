@@ -1,18 +1,19 @@
 // 종이비행기 활공 물리. 진짜 공력은 아니고 게임 느낌 나게 단순화한 모델
 // 핵심 규칙: 기수 내리면 가속, 올리면 감속. 속도 없으면 실속으로 뚝 떨어짐
+// 종이비행기 스케일. 빠르지 않은 대신 바람이 크게 작용함
 const GRAVITY = 9.8
-const MIN_SPEED = 6
-const MAX_SPEED = 55
-const BASE_SINK = 1.7
+const MIN_SPEED = 5
+const MAX_SPEED = 28
+const BASE_SINK = 1.15
 
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max)
 
-export const createFlightState = (altitude = 130) => ({
+export const createFlightState = (altitude = 100) => ({
   pos: { x: 0, y: altitude, z: 0 },
   yaw: 0, // 0이면 -z 방향(북쪽)을 봄
   pitch: 0,
   roll: 0,
-  speed: 20,
+  speed: 12,
   vy: 0,
   distance: 0,
   time: 0,
@@ -21,9 +22,9 @@ export const createFlightState = (altitude = 130) => ({
 
 // input: { turn: -1~1, pitch: -1~1 } / env: { wind: {x,z}, precip: 0~1 }
 export const stepFlight = (state, input, env, dt) => {
-  // 속도가 빠를수록 선회가 잘 먹힘
-  const turnGrip = 0.55 + 0.45 * Math.min(state.speed / 30, 1)
-  state.yaw += input.turn * 1.5 * turnGrip * dt
+  // 속도가 빠를수록 선회가 잘 먹힘. 빌딩 피하려면 기민해야 해서 선회율 높게
+  const turnGrip = 0.55 + 0.45 * Math.min(state.speed / 18, 1)
+  state.yaw += input.turn * 1.8 * turnGrip * dt
 
   // 측풍 성분(+면 오른쪽으로 밀림) → 밀리는 쪽으로 기울고, 기수도 서서히 그쪽으로 돌아감
   const fx0 = -Math.sin(state.yaw)
@@ -39,18 +40,18 @@ export const stepFlight = (state, input, env, dt) => {
   state.pitch += (targetPitch - state.pitch) * Math.min(dt * 3.2, 1)
 
   // 비/눈 오면 공기저항 증가
-  const dragK = 0.0011 * (1 + env.precip * 0.7)
+  const dragK = 0.0035 * (1 + env.precip * 0.7)
   const accel = GRAVITY * Math.sin(-state.pitch) * 0.95 - dragK * state.speed * state.speed
   state.speed = clamp(state.speed + accel * dt, MIN_SPEED, MAX_SPEED)
 
   // 하강률: 기본 + 비젖음 + 실속(저속에서 기수 들면 확 가라앉음)
-  const stall = state.speed < 12 && state.pitch > 0.05 ? 3.5 : 0
+  const stall = state.speed < 7 && state.pitch > 0.05 ? 2.5 : 0
   const sink = BASE_SINK * (1 + env.precip * 1.1) + stall
 
   // 진행방향 바람 성분(+면 순풍): 순풍은 띄워주고 역풍은 아래로 눌러버림
   const alongWind = env.wind.x * fx0 + env.wind.z * fz0
   state.alongWind = alongWind
-  state.vy = state.speed * Math.sin(state.pitch) - sink + clamp(alongWind * 0.3, -2.2, 2.2)
+  state.vy = state.speed * Math.sin(state.pitch) - sink + clamp(alongWind * 0.25, -1.6, 1.6)
 
   // yaw 기준 전진 방향 (-z가 정면)
   const fx = -Math.sin(state.yaw)

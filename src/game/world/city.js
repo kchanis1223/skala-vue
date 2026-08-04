@@ -66,12 +66,12 @@ export class CityField {
       opacity: 0.9,
     })
 
-    // 발사 타워: 도시에서 제일 높은 초고층. 옥상이 이륙장
+    // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
-    this.launchTop = ground0 + 200
+    this.launchTop = ground0 + 95
     const towerMesh = new THREE.Mesh(this.buildingGeo, this.buildingMats)
-    towerMesh.scale.set(LAUNCH_HALF * 2, 200, LAUNCH_HALF * 2)
-    towerMesh.position.set(0, ground0 + 100, 0)
+    towerMesh.scale.set(LAUNCH_HALF * 2, 95, LAUNCH_HALF * 2)
+    towerMesh.position.set(0, ground0 + 47.5, 0)
     const pad = new THREE.Mesh(
       new THREE.BoxGeometry(LAUNCH_HALF * 2 + 2, 1, LAUNCH_HALF * 2 + 2),
       new THREE.MeshLambertMaterial({ color: '#39424a' }),
@@ -148,9 +148,9 @@ export class CityField {
 
         const r1 = blockSeed(bx, bz)
         const r2 = blockSeed(bx, bz, 1)
-        // 고층지구일수록 마천루. 외곽은 저층
+        // 고층지구일수록 마천루. 시작 고도(약 100m)보다 높은 타워가 곳곳에 솟게
         const district = districtLevel(centerX, centerZ)
-        const h = 10 + district * district * 165 * (0.45 + r1 * 0.55)
+        const h = 18 + Math.pow(district, 1.6) * 140 * (0.45 + r1 * 0.55)
         const w = 16 + r1 * 13
         const d = 16 + r2 * 13
         this.dummy.position.set(centerX, ground + h / 2 - 0.5, centerZ)
@@ -194,8 +194,8 @@ export class CityField {
   collides(x, y, z) {
     if (
       y < this.launchTop + 1 &&
-      Math.abs(x) < LAUNCH_HALF + 1.5 &&
-      Math.abs(z) < LAUNCH_HALF + 1.5
+      Math.abs(x) < LAUNCH_HALF + 0.8 &&
+      Math.abs(z) < LAUNCH_HALF + 0.8
     )
       return true
 
@@ -206,7 +206,7 @@ export class CityField {
         const entry = this.pool.get(`${ccx + dx},${ccz + dz}`)
         if (!entry) continue
         for (const b of entry.boxes) {
-          if (y < b.top + 0.5 && Math.abs(x - b.x) < b.hw + 1.5 && Math.abs(z - b.z) < b.hd + 1.5) {
+          if (y < b.top + 0.4 && Math.abs(x - b.x) < b.hw + 0.8 && Math.abs(z - b.z) < b.hd + 0.8) {
             return true
           }
         }

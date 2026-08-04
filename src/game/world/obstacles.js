@@ -8,7 +8,7 @@ export class ObstacleField {
   constructor(scene) {
     this.scene = scene
     this.items = []
-    this.nextSpawnAt = 250
+    this.nextSpawnAt = 150
     this.balloonGeo = new THREE.SphereGeometry(3.2, 10, 10)
     this.basketGeo = new THREE.BoxGeometry(1.4, 1.2, 1.4)
     this.birdGeo = new THREE.ConeGeometry(0.9, 2.4, 4)
@@ -24,12 +24,12 @@ export class ObstacleField {
     const fz = -Math.cos(state.yaw)
     const count = 2 + Math.floor(Math.random() * 3)
     for (let i = 0; i < count; i++) {
-      const ahead = 260 + Math.random() * 260
-      const side = (Math.random() - 0.5) * 170
+      const ahead = 120 + Math.random() * 160
+      const side = (Math.random() - 0.5) * 100
       const x = state.pos.x + fx * ahead - fz * side
       const z = state.pos.z + fz * ahead + fx * side
       const ground = terrainHeight(x, z)
-      const y = Math.max(ground + 18, state.pos.y + (Math.random() - 0.5) * 55)
+      const y = Math.max(ground + 14, state.pos.y + (Math.random() - 0.5) * 35)
 
       const isBalloon = Math.random() < 0.55
       const group = new THREE.Group()
@@ -67,7 +67,7 @@ export class ObstacleField {
   update(state, dt) {
     if (state.distance > this.nextSpawnAt) {
       this.spawnCluster(state)
-      this.nextSpawnAt += 170
+      this.nextSpawnAt += 120
     }
 
     let collided = false
@@ -84,7 +84,7 @@ export class ObstacleField {
       }
       if (!item.hit) {
         const d = Math.hypot(p.x - state.pos.x, p.y - state.pos.y, p.z - state.pos.z)
-        if (d < item.radius + 2.2) {
+        if (d < item.radius + 1.2) {
           item.hit = true
           collided = true
           // 맞은 건 떨어뜨림

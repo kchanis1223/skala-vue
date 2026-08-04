@@ -9,17 +9,17 @@ import { WingtipTrails } from './world/trails'
 import { CityField } from './world/city'
 import { ObstacleField } from './world/obstacles'
 
-// 종이비행기 모양을 삼각형 몇 개로 직접 만듦
+// 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
 const buildGlider = () => {
   const geo = new THREE.BufferGeometry()
   // 기수 / 좌우 날개끝 / 꼬리 접힘부
   const v = new Float32Array([
     // 왼쪽 날개
-    0, 0, -5, -4.6, 0.8, 3, 0, 0.3, 2.4,
+    0, 0, -1.8, -1.66, 0.29, 1.08, 0, 0.11, 0.86,
     // 오른쪽 날개
-    0, 0, -5, 0, 0.3, 2.4, 4.6, 0.8, 3,
+    0, 0, -1.8, 0, 0.11, 0.86, 1.66, 0.29, 1.08,
     // 아래 접힌 몸통
-    0, 0, -5, 0, -1.1, 3, 0, 0.3, 2.4,
+    0, 0, -1.8, 0, -0.4, 1.08, 0, 0.11, 0.86,
   ])
   geo.setAttribute('position', new THREE.BufferAttribute(v, 3))
   geo.computeVertexNormals()
@@ -51,7 +51,7 @@ export class GliderEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
     this.scene = new THREE.Scene()
-    this.camera = new THREE.PerspectiveCamera(68, 1, 0.1, 2000)
+    this.camera = new THREE.PerspectiveCamera(66, 1, 0.1, 2000)
 
     this.sky = setupSky(this.scene, { theme: params.theme, isNight: params.isNight })
     this.terrain = new TerrainManager(this.scene, { snowy: params.theme === 'snow' })
@@ -61,12 +61,12 @@ export class GliderEngine {
     })
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
-    this.state = createFlightState(this.city.launchTop + 8)
-    this.state.pos.z = -22
+    this.state = createFlightState(this.city.launchTop + 5)
+    this.state.pos.z = -20
     this.input = createInput()
 
     // 시작부터 기체 뒤에 카메라 배치 (안 그러면 건물 속에서 시작함)
-    this.camera.position.set(0, this.state.pos.y + 7, this.state.pos.z + 20)
+    this.camera.position.set(0, this.state.pos.y + 2.6, this.state.pos.z + 8)
 
     this.obstacles = new ObstacleField(this.scene)
     this.precip =
@@ -123,21 +123,21 @@ export class GliderEngine {
 
     // 기체 위치/자세 반영. 측풍 세기만큼 살짝 떠오르는 부유감 추가
     const lift =
-      Math.min(Math.abs(s.crosswind ?? 0) * 0.14, 1.3) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
+      Math.min(Math.abs(s.crosswind ?? 0) * 0.1, 0.9) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
     this.glider.position.set(s.pos.x, s.pos.y + lift, s.pos.z)
     // 순풍이면 기수가 살짝 들리고 역풍이면 눌림
     const windPitch = THREE.MathUtils.clamp((s.alongWind ?? 0) * 0.012, -0.1, 0.1)
     this.glider.rotation.set(s.pitch + windPitch, s.yaw, s.roll)
 
-    // 카메라는 기체 뒤를 부드럽게 따라감
+    // 카메라는 기체 뒤에 바짝 붙어서 따라감 (종이비행기 시점)
     const fx = -Math.sin(s.yaw)
     const fz = -Math.cos(s.yaw)
-    const camTarget = new THREE.Vector3(s.pos.x - fx * 20, s.pos.y + 7, s.pos.z - fz * 20)
-    this.camera.position.lerp(camTarget, Math.min(dt * 4, 1))
-    this.camera.lookAt(s.pos.x + fx * 18, s.pos.y, s.pos.z + fz * 18)
+    const camTarget = new THREE.Vector3(s.pos.x - fx * 8, s.pos.y + 2.6, s.pos.z - fz * 8)
+    this.camera.position.lerp(camTarget, Math.min(dt * 4.5, 1))
+    this.camera.lookAt(s.pos.x + fx * 10, s.pos.y, s.pos.z + fz * 10)
 
     // 속도 붙으면 화각이 넓어지면서 빨라지는 느낌 남
-    const targetFov = 68 + THREE.MathUtils.clamp((s.speed - 16) / 36, 0, 1) * 14
+    const targetFov = 66 + THREE.MathUtils.clamp((s.speed - 8) / 20, 0, 1) * 12
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(dt * 3, 1)
     this.camera.updateProjectionMatrix()
 
@@ -155,7 +155,7 @@ export class GliderEngine {
     )
 
     // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
-    const trailIntensity = Math.min(Math.max((s.speed - 10) / 22, 0) + Math.abs(s.roll), 1)
+    const trailIntensity = Math.min(Math.max((s.speed - 7) / 14, 0) + Math.abs(s.roll), 1)
     this.trails.update(this.glider, this.camera.position, trailIntensity)
     this.gusts.update(
       this.glider.position,
@@ -185,7 +185,7 @@ export class GliderEngine {
     if (!this.finished) {
       const ground = terrainHeight(s.pos.x, s.pos.z)
       const crashed = this.city.collides(s.pos.x, s.pos.y, s.pos.z)
-      if (crashed || s.pos.y <= ground + 1.2) {
+      if (crashed || s.pos.y <= ground + 0.8) {
         this.finished = true
         this.running = false
         this.onEnd?.({
