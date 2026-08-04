@@ -34,7 +34,9 @@ export class WindStreaks {
     const ay = -vel.y
     const az = wind.z - vel.z
     const mag = Math.hypot(ax, ay, az) || 1
-    const len = Math.min(mag * 0.14, 7)
+    // 빠를수록 선이 길어지고 진해짐
+    const len = Math.min(mag * 0.22, 12)
+    this.material.opacity = 0.15 + Math.min(mag / 45, 1) * 0.42
     const dx = (ax / mag) * len
     const dy = (ay / mag) * len
     const dz = (az / mag) * len

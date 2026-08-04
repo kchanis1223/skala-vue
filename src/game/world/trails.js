@@ -1,69 +1,56 @@
 import * as THREE from 'three'
+import { Ribbon } from './ribbon'
 
-const TRAIL_LEN = 42
+const TRAIL_LEN = 40
 
-// 날개 끝에서 나오는 기류 궤적 (좌우 한 줄씩)
-class Trail {
+// 날개 끝 트레일. 선 대신 폭 있는 리본이라 제트기 수증기 궤적처럼 보임
+class TipTrail {
   constructor(scene) {
-    this.scene = scene
-    const positions = new Float32Array(TRAIL_LEN * 3)
-    const colors = new Float32Array(TRAIL_LEN * 3)
-    // 꼬리로 갈수록 어두워지는 그라데이션
-    for (let i = 0; i < TRAIL_LEN; i++) {
-      const t = i / (TRAIL_LEN - 1)
-      colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = 0.4 + t * 0.6
-    }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    this.material = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.4,
+    this.ribbon = new Ribbon(scene, TRAIL_LEN, {
+      // t=0이 날개끝(최신), 꼬리로 갈수록 흐려짐
+      alphaFn: (t) => (1 - t) ** 1.4,
+      // 날개끝에선 얇게 시작해서 부풀었다가 꼬리에서 가늘어지는 물방울 모양
+      widthFn: (t) => 0.08 + 1.05 * Math.pow(t, 0.35) * (1 - t * 0.8),
     })
-    this.line = new THREE.Line(geo, this.material)
-    this.line.frustumCulled = false
-    scene.add(this.line)
+    this.pts = Array.from({ length: TRAIL_LEN }, () => new THREE.Vector3())
     this.primed = false
   }
 
   push(tip) {
-    const pos = this.line.geometry.attributes.position
     if (!this.primed) {
-      // 처음엔 전부 날개끝 위치로 채워서 원점에서 선 튀는거 방지
-      for (let i = 0; i < TRAIL_LEN; i++) pos.setXYZ(i, tip.x, tip.y, tip.z)
+      for (const p of this.pts) p.copy(tip)
       this.primed = true
-    } else {
-      pos.array.copyWithin(0, 3)
-      pos.setXYZ(TRAIL_LEN - 1, tip.x, tip.y, tip.z)
+      return
     }
-    pos.needsUpdate = true
+    for (let i = TRAIL_LEN - 1; i > 0; i--) this.pts[i].copy(this.pts[i - 1])
+    this.pts[0].copy(tip)
+  }
+
+  update(tip, camPos, opacity) {
+    this.push(tip)
+    this.ribbon.material.opacity = opacity
+    this.ribbon.rebuild(this.pts, camPos)
   }
 
   dispose() {
-    this.scene.remove(this.line)
-    this.line.geometry.dispose()
-    this.material.dispose()
+    this.ribbon.dispose()
   }
 }
 
 export class WingtipTrails {
   constructor(scene) {
-    this.left = new Trail(scene)
-    this.right = new Trail(scene)
+    this.left = new TipTrail(scene)
+    this.right = new TipTrail(scene)
     this.tmp = new THREE.Vector3()
   }
 
   // glider: THREE.Group, intensity: 0~1 (속도/선회 반영)
-  update(glider, intensity) {
+  update(glider, camPos, intensity) {
+    const opacity = 0.3 + intensity * 0.55
     this.tmp.set(-4.6, 0.8, 3).applyEuler(glider.rotation).add(glider.position)
-    this.left.push(this.tmp)
+    this.left.update(this.tmp, camPos, opacity)
     this.tmp.set(4.6, 0.8, 3).applyEuler(glider.rotation).add(glider.position)
-    this.right.push(this.tmp)
-
-    const opacity = 0.3 + intensity * 0.65
-    this.left.material.opacity = opacity
-    this.right.material.opacity = opacity
+    this.right.update(this.tmp, camPos, opacity)
   }
 
   dispose() {
