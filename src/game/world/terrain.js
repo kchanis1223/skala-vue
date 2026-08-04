@@ -1,5 +1,13 @@
 import * as THREE from 'three'
-import { groundKind, toLogical, seaStartX, inRiver, riverCenterX, RIVER_HALF } from './cityLayout'
+import {
+  groundKind,
+  toLogical,
+  seaStartX,
+  inRiver,
+  riverCenterX,
+  RIVER_HALF,
+  lotShade,
+} from './cityLayout'
 
 // 라이브러리 없이 해시 기반 밸류 노이즈로 언덕 높이 만들기
 const hash = (ix, iz) => {
@@ -53,7 +61,7 @@ export const terrainHeight = (x, z) => {
 }
 
 export const CHUNK = 220
-const SEGS = 44 // 도로가 보이려면 정점이 촘촘해야 함
+const SEGS = 60 // 정점이 촘촘해야 저공에서 도로 경계가 덜 뭉개짐
 const RANGE = 2 // 플레이어 주변 5x5 청크 유지
 
 // 청크를 풀로 돌려쓰면서 무한 도시 바닥처럼 보이게 함
@@ -67,6 +75,8 @@ export class TerrainManager {
     this.lot = new THREE.Color(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6'))
     this.water = new THREE.Color(snowy ? '#a8c7d8' : '#3f7fae')
     this.sand = new THREE.Color(snowy ? '#ded8c8' : '#d8c58f')
+    this.parking = new THREE.Color(snowy ? '#767e86' : '#5b6167')
+    this.tmpColor = new THREE.Color()
     this.pool = new Map() // "cx,cz" -> mesh
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })
   }
@@ -83,16 +93,17 @@ export class TerrainManager {
       const wz = pos.getZ(i) + oz
       const kind = groundKind(wx, wz, seed, this.style)
       pos.setY(i, terrainHeight(wx, wz))
-      const c =
-        kind === 'road'
-          ? this.road
-          : kind === 'park'
-            ? this.park
-            : kind === 'water'
-              ? this.water
-              : kind === 'sand'
-                ? this.sand
-                : this.lot
+      let c
+      if (kind === 'road') c = this.road
+      else if (kind === 'park') c = this.park
+      else if (kind === 'water') c = this.water
+      else if (kind === 'sand') c = this.sand
+      else if (kind === 'parking') c = this.parking
+      else {
+        // 부지는 블록마다 톤이 다르고 건물 발밑은 어둡게
+        const { lx, lz } = toLogical(wx, wz, seed)
+        c = this.tmpColor.copy(this.lot).multiplyScalar(lotShade(lx, lz, seed))
+      }
       colors.setXYZ(i, c.r, c.g, c.b)
     }
     pos.needsUpdate = true

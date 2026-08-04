@@ -46,12 +46,49 @@ export const worldFromLogical = (lx, lz, seed = 0) => {
   return { x: lx - wx, z: lz - wz }
 }
 
-// 블록 타입: 건물 / 공원 / 공터
+// 블록 타입: 건물 / 공원 / 공터 / 주차장
 export const blockType = (bx, bz, seed = 0, parkProb = 0.15, plazaProb = 0.09) => {
   const r = hash(bx * 3 + 11 + seed, bz * 7 + 5 - seed)
   if (r < parkProb) return 'park'
   if (r < parkProb + plazaProb) return 'plaza'
+  if (r < parkProb + plazaProb + 0.05) return 'parking'
   return 'build'
+}
+
+// 도로 위계: 몇 줄에 하나씩 넓은 대로, 나머지는 골목
+// 골목은 구간(블록 경계)마다 없기도 해서 블록들이 합쳐진 것처럼 보임
+export const MAJOR_W = 11
+export const MINOR_W = 6
+
+export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < 0.22
+export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < 0.22
+
+const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.6
+const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.6
+
+// 이 논리 좌표가 도로 위인지
+export const roadAt = (lx, lz, seed = 0) => {
+  const kx = blockIndex(lx)
+  const kz = blockIndex(lz)
+  const llx = lx - kx * BLOCK
+  const llz = lz - kz * BLOCK
+  const majX = isMajorX(kx, seed)
+  const majZ = isMajorZ(kz, seed)
+  if (llx < (majX ? MAJOR_W : MINOR_W) && (majX || segExistsX(kx, kz, seed))) return true
+  if (llz < (majZ ? MAJOR_W : MINOR_W) && (majZ || segExistsZ(kx, kz, seed))) return true
+  return false
+}
+
+// 부지 바닥 명암: 블록마다 톤이 다르고 건물 발밑엔 어두운 기초 패드
+export const lotShade = (lx, lz, seed = 0) => {
+  const bx = blockIndex(lx)
+  const bz = blockIndex(lz)
+  const jitter = 0.9 + blockSeed(bx, bz, seed, 31) * 0.18
+  const cx = bx * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+  const cz = bz * BLOCK + ROAD_W + (BLOCK - ROAD_W) / 2
+  const padHalf = (BLOCK - ROAD_W) * 0.33
+  const inPad = Math.abs(lx - cx) < padHalf && Math.abs(lz - cz) < padHalf
+  return inPad ? jitter * 0.8 : jitter
 }
 
 export const blockSeed = (bx, bz, seed = 0, salt = 0) =>
@@ -74,7 +111,7 @@ export const seaStartX = (lz, seed = 0) =>
 
 export const inSea = (lx, lz, seed, style) => !!style?.coast && lx > seaStartX(lz, seed)
 
-// 이 좌표 바닥이 뭔지: 물 / 모래사장 / 도로 / 공원 / 부지
+// 이 좌표 바닥이 뭔지: 물 / 모래사장 / 도로 / 공원 / 주차장 / 부지
 export const groundKind = (x, z, seed = 0, style = null) => {
   const { lx, lz } = toLogical(x, z, seed)
   if (style?.coast) {
@@ -82,12 +119,12 @@ export const groundKind = (x, z, seed = 0, style = null) => {
     if (lx > s) return 'water'
     if (lx > s - 14) return 'sand'
   }
-  const llx = ((lx % BLOCK) + BLOCK) % BLOCK
-  const llz = ((lz % BLOCK) + BLOCK) % BLOCK
-  const onRoad = llx < ROAD_W || llz < ROAD_W
+  const onRoad = roadAt(lx, lz, seed)
   // 도로선은 강 위에서도 이어져서 다리가 됨
   if (style?.river && inRiver(lx, lz, seed)) return onRoad ? 'road' : 'water'
   if (onRoad) return 'road'
   const type = blockType(blockIndex(lx), blockIndex(lz), seed, style?.parkProb, style?.plazaProb)
-  return type === 'park' ? 'park' : 'lot'
+  if (type === 'park') return 'park'
+  if (type === 'parking') return 'parking'
+  return 'lot'
 }

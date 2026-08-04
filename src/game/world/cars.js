@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { terrainHeight } from './terrain'
-import { BLOCK, ROAD_W, worldFromLogical, inSea } from './cityLayout'
+import { BLOCK, MAJOR_W, worldFromLogical, inSea, isMajorX, isMajorZ } from './cityLayout'
 
 const COUNT = 34
 const CAR_COLORS = ['#d64541', '#f5f5f5', '#37474f', '#3f6fb5', '#e8b23a', '#8d6e63', '#5cb85c']
@@ -29,8 +29,16 @@ export class CarField {
   respawn(car, px, pz) {
     car.axis = Math.random() < 0.5 ? 'x' : 'z'
     const near = car.axis === 'x' ? pz : px
-    // 근처 도로선 하나 골라서 그 위에 놓음
-    car.line = Math.round((near + (Math.random() - 0.5) * 320) / BLOCK) * BLOCK + ROAD_W / 2
+    // 차는 넓은 대로만 다님 (골목은 끊겨있어서). 근처에서 대로를 찾음
+    let k = Math.round((near + (Math.random() - 0.5) * 320) / BLOCK)
+    for (let d = 0; d < 12; d++) {
+      const isMajor = car.axis === 'x' ? isMajorZ(k + d, this.seed) : isMajorX(k + d, this.seed)
+      if (isMajor) {
+        k += d
+        break
+      }
+    }
+    car.line = k * BLOCK + MAJOR_W / 2
     const along = car.axis === 'x' ? px : pz
     car.pos = along + (Math.random() - 0.5) * 420
     car.dir = Math.random() < 0.5 ? 1 : -1

@@ -12,6 +12,9 @@ import {
   inSea,
   seaStartX,
   worldFromLogical,
+  isMajorX,
+  isMajorZ,
+  MAJOR_W,
 } from './cityLayout'
 
 const RANGE = 2
@@ -285,6 +288,8 @@ export class CityField {
           continue
         }
 
+        if (type === 'parking') continue // 주차장은 빈 아스팔트
+
         if (type === 'plaza') {
           // 공터엔 가끔 공사장 크레인 (부딪히면 추락이니 조심)
           if (district > 0.4 && r2 < 0.35 && n.cr < MAX_CRANES) {
@@ -415,19 +420,24 @@ export class CityField {
       }
     }
 
-    // 도로 중앙선 (점선). 논리 격자 선을 따라 찍되 워프를 적용해서 도로랑 같이 휘어짐
-    const lineStart = (v) => Math.ceil((v - half) / BLOCK) * BLOCK + ROAD_W / 2
+    // 중앙선 점선은 넓은 대로에만. 워프 적용해서 도로랑 같이 휘어짐
     const putDash = (dlx, dlz, rotY) => {
       if (inSea(dlx, dlz, seed, style)) return
       const dw = worldFromLogical(dlx, dlz, seed)
       this.place(entry.dashes, n.da++, dw.x, terrainHeight(dw.x, dw.z) + 0.12, dw.z, 1, 1, 1, rotY)
     }
-    for (let lx = lineStart(ox); lx < ox + half && n.da < MAX_DASHES; lx += BLOCK) {
+    for (let k = blockIndex(ox - half); k <= blockIndex(ox + half); k++) {
+      if (!isMajorX(k, seed)) continue
+      const lx = k * BLOCK + MAJOR_W / 2
+      if (lx < ox - half || lx >= ox + half) continue
       for (let z = oz - half + 4; z < oz + half && n.da < MAX_DASHES; z += 15) {
         putDash(lx, z, 0)
       }
     }
-    for (let lz = lineStart(oz); lz < oz + half && n.da < MAX_DASHES; lz += BLOCK) {
+    for (let k = blockIndex(oz - half); k <= blockIndex(oz + half); k++) {
+      if (!isMajorZ(k, seed)) continue
+      const lz = k * BLOCK + MAJOR_W / 2
+      if (lz < oz - half || lz >= oz + half) continue
       for (let x = ox - half + 4; x < ox + half && n.da < MAX_DASHES; x += 15) {
         putDash(x, lz, Math.PI / 2)
       }

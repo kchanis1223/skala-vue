@@ -15,7 +15,8 @@ export const setupSky = (scene, { theme = 'clear', isNight = false }) => {
   if (isNight) skyColor.multiplyScalar(0.28)
 
   scene.background = skyColor
-  scene.fog = new THREE.Fog(skyColor, 80, isNight ? preset.fog * 0.7 : preset.fog)
+  // 안개가 너무 가까이서 시작하면 저공에서 도시가 뿌옇게 보여서 뒤로 밀어둠
+  scene.fog = new THREE.Fog(skyColor, 150, (isNight ? preset.fog * 0.7 : preset.fog) * 1.25)
 
   const hemi = new THREE.HemisphereLight(
     '#ffffff',
