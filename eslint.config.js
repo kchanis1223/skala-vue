@@ -21,6 +21,16 @@ export default defineConfig([
     },
   },
 
+  // api/는 Vercel에서 도는 서버 코드라 node 전역을 씀
+  {
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
 
