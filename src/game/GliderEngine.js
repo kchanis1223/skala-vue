@@ -39,7 +39,12 @@ const makeWingTexture = () => {
   g.font = '900 88px Pretendard, Arial, sans-serif'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  g.fillText('SKALA', 256, 88)
+  // uv 투영 방향 때문에 상하만 뒤집어 그려야 게임에서 바로 보임
+  g.save()
+  g.translate(256, 88)
+  g.scale(1, -1)
+  g.fillText('SKALA', 0, 0)
+  g.restore()
   const tex = new THREE.CanvasTexture(canvas)
   tex.anisotropy = 4
   return tex
