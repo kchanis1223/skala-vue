@@ -44,7 +44,7 @@ const MAX_SHIPS = 5
 const MAX_BRIDGES = 6
 const MAX_LAMPS = 26 // 대로변 가로등
 const MAX_CONTAINERS = 22 // 항만 컨테이너
-const MAX_HOUSES = 22 // 박공지붕 주택
+const MAX_HOUSES = 30 // 주택 (2층집은 몸통 2개 먹어서 여유있게)
 
 const CONTAINER_COLORS = ['#c8452f', '#2660a4', '#2f7d4f', '#d8a23a', '#8a5a44', '#5b6770']
 const ROOF_COLORS = ['#a8433a', '#7a8894', '#5d6d7a', '#8a6f52', '#4e6e58', '#3f6e8c', '#9c5a78']
@@ -299,6 +299,7 @@ export class CityField {
       la: 0,
       co: 0,
       ho: 0,
+      rf: 0,
       ch: 0,
     }
 
@@ -558,69 +559,99 @@ export class CityField {
         const { x: bwx, z: bwz } = worldFromLogical(plan.cx, plan.cz, seed)
         const bGround = terrainHeight(bwx, bwz)
 
-        // 주택가: 저층 자리는 전부 박공집 2종 중 하나
-        // 주택1 = 낮고 넓은 단층집(지붕이 큼) / 주택2 = 2~3층집(몸통 높고 굴뚝 있음)
-        if (isLow && n.ho < MAX_HOUSES) {
+        // 주택가: 저층 자리는 전부 주택 2종 중 하나. 모델 구조 자체가 다름
+        // 주택1 = 낮고 넓은 단층집 (몸통 하나 + 큰 박공지붕)
+        // 주택2 = 2~3층집 (아래층 + 옆으로 물러난 위층 2단 스택 → 테라스가 생김 + 작은 지붕 + 굴뚝)
+        if (isLow && n.ho < MAX_HOUSES - 1 && n.rf < MAX_HOUSES) {
           const twoStory = blockSeed(bx, bz, seed, 12) < 0.5
-          const hw2 = twoStory ? w * 0.6 : w
-          const hd2 = twoStory ? d * 0.6 : d
-          const bodyH = twoStory ? 10 + r1 * 4 : 3.8 + r1 * 1.4
-          const roofH = Math.min(hw2, hd2) * (twoStory ? 0.3 : 0.55)
           const hBurial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
-          this.place(
-            entry.houses,
-            n.ho,
-            bwx,
-            bGround + (bodyH - hBurial) / 2,
-            bwz,
-            hw2,
-            bodyH + hBurial,
-            hd2,
-          )
-          // 주택가는 절반쯤 원색이라 제일 알록달록함
-          entry.houses.setColorAt(
-            n.ho,
-            this.vary(this.pickWall(style, blockSeed(bx, bz, seed, 14), r2), r1, r3),
-          )
-          // 지붕 용마루는 긴 변 방향으로
-          const alongZ = hd2 > hw2
-          this.place(
-            entry.roofs,
-            n.ho,
-            bwx,
-            bGround + bodyH,
-            bwz,
-            (alongZ ? hd2 : hw2) + 1.4,
-            roofH,
-            (alongZ ? hw2 : hd2) + 1.4,
-            alongZ ? Math.PI / 2 : 0,
-          )
-          entry.roofs.setColorAt(
-            n.ho,
-            this.vary(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)], r2, r4),
-          )
-          // 2~3층집은 지붕 위로 확실히 솟은 굴뚝으로 실루엣을 다르게
-          if (twoStory && n.ch < MAX_HOUSES) {
-            const ridgeOff = (r3 - 0.5) * (alongZ ? hd2 : hw2) * 0.5
+          // 주택가는 절반쯤 원색이라 제일 알록달록함. 위아래층은 같은 색
+          // (this.color를 공유하니까 clone으로 떼어둠)
+          const wallTint = this.vary(
+            this.pickWall(style, blockSeed(bx, bz, seed, 14), r2),
+            r1,
+            r3,
+          ).clone()
+          const roofTint = this.color
+            .set(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)])
+            .offsetHSL((r2 - 0.5) * 0.05, 0, (r4 - 0.5) * 0.1)
+            .clone()
+
+          if (twoStory) {
+            const bw = Math.min(w, 17)
+            const bd = Math.min(d, 17)
+            const baseH = 4.6 + r1 * 1.2
+            const upH = 4.4 + r3 * 3
+            const alongZ = bd > bw
+            // 위층은 긴 변 방향으로 한쪽에 몰림 → 반대쪽 아래층 지붕이 테라스처럼 남음
+            const upW = alongZ ? bw : bw * 0.56
+            const upD = alongZ ? bd * 0.56 : bd
+            const dir = r4 < 0.5 ? 1 : -1
+            const upX = bwx + (alongZ ? 0 : (dir * (bw - upW)) / 2)
+            const upZ = bwz + (alongZ ? (dir * (bd - upD)) / 2 : 0)
+
+            this.place(entry.houses, n.ho, bwx, bGround + (baseH - hBurial) / 2, bwz, bw, baseH + hBurial, bd)
+            entry.houses.setColorAt(n.ho, wallTint)
+            this.place(entry.houses, n.ho + 1, upX, bGround + baseH + upH / 2, upZ, upW, upH, upD)
+            entry.houses.setColorAt(n.ho + 1, wallTint)
+            n.ho += 2
+
+            const roofH = Math.min(upW, upD) * 0.42
             this.place(
-              entry.chimneys,
-              n.ch++,
-              bwx + (alongZ ? 0 : ridgeOff),
-              bGround + bodyH + roofH + 1.1,
-              bwz + (alongZ ? ridgeOff : 0),
-              1.3,
-              3.4,
-              1.3,
+              entry.roofs,
+              n.rf,
+              upX,
+              bGround + baseH + upH,
+              upZ,
+              (alongZ ? upD : upW) + 1.2,
+              roofH,
+              (alongZ ? upW : upD) + 1.2,
+              alongZ ? Math.PI / 2 : 0,
             )
+            entry.roofs.setColorAt(n.rf++, roofTint)
+
+            if (n.ch < MAX_HOUSES) {
+              this.place(
+                entry.chimneys,
+                n.ch++,
+                upX,
+                bGround + baseH + upH + roofH + 1,
+                upZ,
+                1.3,
+                3.2,
+                1.3,
+              )
+            }
+            entry.boxes.push(
+              { x: bwx, z: bwz, hw: bw / 2, hd: bd / 2, top: bGround + baseH },
+              { x: upX, z: upZ, hw: upW / 2, hd: upD / 2, top: bGround + baseH + upH + roofH * 0.5 },
+            )
+          } else {
+            const bodyH = 3.8 + r1 * 1.4
+            const roofH = Math.min(w, d) * 0.55
+            const alongZ = d > w
+            this.place(entry.houses, n.ho, bwx, bGround + (bodyH - hBurial) / 2, bwz, w, bodyH + hBurial, d)
+            entry.houses.setColorAt(n.ho++, wallTint)
+            this.place(
+              entry.roofs,
+              n.rf,
+              bwx,
+              bGround + bodyH,
+              bwz,
+              (alongZ ? d : w) + 1.4,
+              roofH,
+              (alongZ ? w : d) + 1.4,
+              alongZ ? Math.PI / 2 : 0,
+            )
+            entry.roofs.setColorAt(n.rf++, roofTint)
+            entry.boxes.push({
+              x: bwx,
+              z: bwz,
+              hw: w / 2,
+              hd: d / 2,
+              top: bGround + bodyH + roofH * 0.5,
+            })
           }
-          n.ho++
-          entry.boxes.push({
-            x: bwx,
-            z: bwz,
-            hw: hw2 / 2,
-            hd: hd2 / 2,
-            top: bGround + bodyH + roofH * 0.5,
-          })
           continue
         }
 
@@ -816,7 +847,7 @@ export class CityField {
     this.hideRest(entry.lampHeads, n.la, MAX_LAMPS)
     this.hideRest(entry.containers, n.co, MAX_CONTAINERS)
     this.hideRest(entry.houses, n.ho, MAX_HOUSES)
-    this.hideRest(entry.roofs, n.ho, MAX_HOUSES)
+    this.hideRest(entry.roofs, n.rf, MAX_HOUSES)
     this.hideRest(entry.chimneys, n.ch, MAX_HOUSES)
   }
 
