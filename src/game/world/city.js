@@ -47,7 +47,21 @@ const MAX_CONTAINERS = 22 // 항만 컨테이너
 const MAX_HOUSES = 22 // 박공지붕 주택
 
 const CONTAINER_COLORS = ['#c8452f', '#2660a4', '#2f7d4f', '#d8a23a', '#8a5a44', '#5b6770']
-const ROOF_COLORS = ['#a8433a', '#7a8894', '#5d6d7a', '#8a6f52', '#4e6e58']
+const ROOF_COLORS = ['#a8433a', '#7a8894', '#5d6d7a', '#8a6f52', '#4e6e58', '#3f6e8c', '#9c5a78']
+
+// 도시 팔레트랑 별개로 섞어 쓰는 원색 계열. 거리에 색이 확 돌게 함
+const ACCENT_COLORS = [
+  '#d95d4e',
+  '#e8923a',
+  '#e0c04a',
+  '#6aa557',
+  '#43a08f',
+  '#4d7fd6',
+  '#7d6bd0',
+  '#c96b9d',
+  '#5e8e6a',
+  '#c47b52',
+]
 
 // 박공지붕용 삼각 프리즘 (단위 크기, scale로 늘려 씀)
 const makeRoofGeo = () => {
@@ -236,9 +250,15 @@ export class CityField {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
 
-  // 같은 팔레트 색이라도 건물마다 색조/명도를 살짝 흔들어서 단조롭지 않게
+  // 같은 팔레트 색이라도 건물마다 색조/채도/명도를 흔들어서 단조롭지 않게
   vary(hex, a, b) {
-    return this.color.set(hex).offsetHSL((a - 0.5) * 0.035, (b - 0.5) * 0.1, (a + b - 1) * 0.07)
+    return this.color.set(hex).offsetHSL((a - 0.5) * 0.07, (b - 0.5) * 0.2, (a + b - 1) * 0.12)
+  }
+
+  // 셋에 하나쯤은 도시 팔레트 대신 원색 계열을 입혀서 거리가 알록달록해짐
+  pickWall(style, accentR, paletteR) {
+    if (accentR < 0.36) return ACCENT_COLORS[Math.floor(paletteR * ACCENT_COLORS.length)]
+    return style.tints[Math.floor(paletteR * style.tints.length)]
   }
 
   place(mesh, index, x, y, z, sx, sy, sz, rotY = 0) {
@@ -544,9 +564,10 @@ export class CityField {
             bodyH + hBurial,
             d,
           )
+          // 주택가는 절반쯤 원색이라 제일 알록달록함
           entry.houses.setColorAt(
             n.ho,
-            this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3),
+            this.vary(this.pickWall(style, blockSeed(bx, bz, seed, 14) * 0.7, r2), r1, r3),
           )
           // 지붕 용마루는 긴 변 방향으로
           const roofH = Math.min(w, d) * 0.4
@@ -603,7 +624,12 @@ export class CityField {
             tierH,
             d * 0.68,
           )
-          const tint = this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3)
+          const tint = this.vary(
+            isGlass ? style.tints[Math.floor(r2 * style.tints.length)]
+              : this.pickWall(style, blockSeed(bx, bz, seed, 14), r2),
+            r1,
+            r3,
+          )
           targetMesh.setColorAt(idx, tint)
           targetMesh.setColorAt(idx + 1, tint)
           if (isGlass) n.g += 2
@@ -612,7 +638,13 @@ export class CityField {
           this.place(targetMesh, idx, bwx, bGround + (h - burial) / 2, bwz, w, h + burial, d)
           targetMesh.setColorAt(
             idx,
-            this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3),
+            this.vary(
+              isGlass
+                ? style.tints[Math.floor(r2 * style.tints.length)]
+                : this.pickWall(style, blockSeed(bx, bz, seed, 14), r2),
+              r1,
+              r3,
+            ),
           )
           if (isGlass) n.g++
           else n.b++
