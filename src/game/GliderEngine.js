@@ -9,6 +9,7 @@ import { WingtipTrails } from './world/trails'
 import { CityField } from './world/city'
 import { CarField } from './world/cars'
 import { CrystalField } from './world/crystals'
+import { Landmarks } from './world/landmarks'
 import { ObstacleField } from './world/obstacles'
 
 // 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
@@ -71,6 +72,7 @@ export class GliderEngine {
       isNight: params.isNight,
     })
     this.cars = new CarField(this.scene, params.style)
+    this.landmarks = new Landmarks(this.scene, params.style, { isNight: params.isNight })
     this.crystalField = new CrystalField(this.scene, this.city, params.style)
 
     // 발사 타워 옥상에서 출발. 타워를 바로 벗어나게 살짝 앞에서 시작
@@ -238,7 +240,9 @@ export class GliderEngine {
     // 건물에 박으면 추락, 땅에 닿으면 착륙. 둘 다 게임 끝
     if (!this.finished) {
       const ground = terrainHeight(s.pos.x, s.pos.z)
-      const crashed = this.city.collides(s.pos.x, s.pos.y, s.pos.z)
+      const crashed =
+        this.city.collides(s.pos.x, s.pos.y, s.pos.z) ||
+        this.landmarks.collides(s.pos.x, s.pos.y, s.pos.z)
       if (crashed || s.pos.y <= ground + 0.8) {
         this.finished = true
         this.running = false
@@ -269,6 +273,7 @@ export class GliderEngine {
     this.gusts.dispose()
     this.city.dispose()
     this.cars.dispose()
+    this.landmarks.dispose()
     this.crystalField.dispose()
     this.scene.remove(this.walls)
     this.wallGeo.dispose()

@@ -27,6 +27,39 @@ const noise2d = (x, z, scale, off = 0) => {
 export const BLOCK = 42 // 블록 한 변 (도로 포함)
 export const ROAD_W = 7 // 도로 폭
 
+// 도시 스타일을 여기서도 알아야 함 (강폭, 산, 구역 규칙이 도시마다 달라서)
+// 비행 시작할 때 terrain의 setTerrainStyle이 같이 세팅해줌
+let layoutStyle = null
+export const setLayoutStyle = (style) => {
+  layoutStyle = style
+}
+
+// 산: 스타일에 봉우리 목록이 있으면 그 주변이 산이 됨 (0~1)
+const peakFactor = (x, z, m) => {
+  const d = Math.hypot(x - m.x, z - m.z)
+  return smooth(Math.max(1 - d / m.r, 0))
+}
+
+export const mountainLevel = (x, z) => {
+  const peaks = layoutStyle?.mountains
+  if (!peaks) return 0
+  let lv = 0
+  for (const m of peaks) lv = Math.max(lv, peakFactor(x, z, m))
+  return lv
+}
+
+// 산 높이 기여분. 지형이랑 색칠 둘 다 이걸 씀
+export const mountainHeight = (x, z) => {
+  const peaks = layoutStyle?.mountains
+  if (!peaks) return 0
+  let h = 0
+  for (const m of peaks) {
+    const t = peakFactor(x, z, m)
+    if (t > 0) h += Math.pow(t, 1.35) * m.h * (0.82 + noise2d(x, z, 55, 913) * 0.36)
+  }
+  return h
+}
+
 export const blockIndex = (v) => Math.floor(v / BLOCK)
 
 // 격자 비틀기. 월드 → 논리로 갈 때 더하는 오프셋
@@ -123,14 +156,18 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   if (Math.hypot(cx, cz) < 55) return null // 발사 타워 자리
   if (inSea(cx, cz, seed, style)) return null
   if (style?.coast && cx > seaStartX(cz, seed) - 30) return null
-  if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < RIVER_HALF + 12) return null
+  if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < riverHalf() + 12) return null
   if (parkAt(cx, cz, seed, style)) return null
+  // 산비탈엔 건물 안 지음
+  const wPos = worldFromLogical(cx, cz, seed)
+  if (mountainLevel(wPos.x, wPos.z) > 0.22) return null
 
   const district = districtLevel(cx, cz, seed)
   const r1 = blockSeed(bx, bz, seed)
   const r2 = blockSeed(bx, bz, seed, 1)
   const r3 = blockSeed(bx, bz, seed, 2)
-  const lowRatio = style?.lowriseRatio ?? 0.3
+  // 구역 규칙이 있으면 저층 비율도 위치 따라 달라짐 (구시가지 같은 것)
+  const lowRatio = style?.lowriseFn?.(cx, cz, seed) ?? style?.lowriseRatio ?? 0.3
   const isLow = r3 < (district > 0.6 ? lowRatio * 0.3 : lowRatio)
 
   let h
@@ -166,15 +203,20 @@ export const blockSeed = (bx, bz, seed = 0, salt = 0) =>
   hash(bx * 31 + salt * 101 + seed, bz * 17 - salt * 57 - seed * 3)
 
 // 저주파 노이즈로 고층지구(다운타운) 정도를 0~1로
-export const districtLevel = (x, z, seed = 0) => noise2d(x, z, 640, seed + 77)
+// 도시 스타일에 구역 규칙(districtFn)이 있으면 그게 우선 (강남/강북 대비 같은 것)
+export const districtLevel = (x, z, seed = 0) => {
+  const base = noise2d(x, z, 640, seed + 77)
+  return layoutStyle?.districtFn ? layoutStyle.districtFn(x, z, seed, base) : base
+}
 
 // 강 중심선 (논리 좌표 기준)
 export const riverCenterX = (lz, seed = 0) =>
   Math.sin(lz * 0.002 + seed) * 220 + Math.sin(lz * 0.0007 - seed) * 120
 
-export const RIVER_HALF = 17
+// 강 반폭. 한강처럼 넓은 강은 스타일에서 키움
+export const riverHalf = () => layoutStyle?.riverHalf ?? 17
 
-export const inRiver = (lx, lz, seed = 0) => Math.abs(lx - riverCenterX(lz, seed)) < RIVER_HALF
+export const inRiver = (lx, lz, seed = 0) => Math.abs(lx - riverCenterX(lz, seed)) < riverHalf()
 
 // 해안선. 이보다 +x쪽은 바다 (해안 도시만)
 export const seaStartX = (lz, seed = 0) =>
@@ -192,6 +234,8 @@ export const groundKind = (x, z, seed = 0, style = null) => {
   }
   // 강 위엔 도로색을 안 칠함 (다리는 3D 모델로 따로 놓임)
   if (style?.river && inRiver(lx, lz, seed)) return 'water'
+  // 산은 도로/블록 무시하고 숲 바닥
+  if (mountainLevel(x, z) > 0.24) return 'mountain'
   const road = roadAt(lx, lz, seed)
   if (road === 'major') return 'road'
   // 골목은 주변 부지색에 섞이는 은은한 길 (경계선처럼 안 보이게)

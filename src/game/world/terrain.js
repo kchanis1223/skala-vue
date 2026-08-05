@@ -5,8 +5,10 @@ import {
   seaStartX,
   inRiver,
   riverCenterX,
-  RIVER_HALF,
+  riverHalf,
   lotShade,
+  setLayoutStyle,
+  mountainHeight,
 } from './cityLayout'
 
 // 라이브러리 없이 해시 기반 밸류 노이즈로 언덕 높이 만들기
@@ -36,6 +38,8 @@ const noise2d = (x, z, scale) => {
 let activeStyle = null
 export const setTerrainStyle = (style) => {
   activeStyle = style
+  // 레이아웃 쪽(강폭/산/구역 규칙)도 같은 스타일을 봐야 함
+  setLayoutStyle(style)
 }
 
 // 지형 높이. 완만한 언덕 위에 도시가 얹혀 있음
@@ -43,6 +47,8 @@ export const setTerrainStyle = (style) => {
 export const terrainHeight = (x, z) => {
   const seed = activeStyle?.seed ?? 0
   let h = noise2d(x + seed * 13, z - seed * 7, 420) * 14 + noise2d(x + 999, z - 999, 90) * 3
+  // 산은 노이즈 언덕 위에 봉우리로 얹힘. 강이 산자락을 지나면 협곡처럼 깎여 내려감
+  h += mountainHeight(x, z)
 
   const { lx, lz } = toLogical(x, z, seed)
   // 해안 도시는 바다 쪽으로 갈수록 낮아지다가 물속으로
@@ -54,7 +60,7 @@ export const terrainHeight = (x, z) => {
   // 강 주변은 저지대로 깎임
   if (activeStyle?.river) {
     const dist = Math.abs(lx - riverCenterX(lz, seed))
-    const t = Math.min(Math.max((RIVER_HALF + 16 - dist) / 16, 0), 1)
+    const t = Math.min(Math.max((riverHalf() + 16 - dist) / 16, 0), 1)
     if (t > 0) h = h * (1 - t) + (inRiver(lx, lz, seed) ? -1.5 : 0) * t
   }
   return h
@@ -84,6 +90,7 @@ export class TerrainManager {
       lot: rgb(snowy ? '#e8edf1' : (style?.lotColor ?? '#989ea6')),
       water: rgb(snowy ? '#a8c7d8' : '#3f7fae'),
       sand: rgb(snowy ? '#ded8c8' : '#d8c58f'),
+      mountain: rgb(snowy ? '#b9c9bb' : '#49703f'),
     }
     this.pool = new Map() // "cx,cz" -> mesh
     this.queue = []
@@ -133,6 +140,10 @@ export class TerrainManager {
         } else if (kind === 'park') {
           base = this.palette.park
           shade = 0.88 + lotShade(wx, wz, seed + 5) * 0.2
+        } else if (kind === 'mountain') {
+          // 산비탈: 숲색 얼룩 + 높이 올라갈수록 살짝 바랜 바위 느낌
+          base = this.palette.mountain
+          shade = 0.8 + lotShade(wx, wz, seed + 9) * 0.34
         } else {
           base = this.palette[kind]
         }

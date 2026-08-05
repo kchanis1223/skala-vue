@@ -1,6 +1,8 @@
 // 도시마다 다른 생김새 정의. 시드가 달라서 블록 배치 자체도 도시별로 전부 다름
 // heightScale: 전체 높이 배율 / glassRatio: 유리 타워 비율 / lowriseRatio: 저층 상가 비율
 // parkProb: 공원 블록 확률 / river: 강 유무 / tints: 건물 색조
+// 전용 맵 도시는 여기에 산(mountains)/구역 규칙(districtFn 등)/랜드마크까지 얹음
+import { riverCenterX } from './cityLayout'
 
 const DEFAULT_TINTS = ['#ffffff', '#dfe7ee', '#cdd8e3', '#e8e2d5', '#f2f5f8']
 const COLD_TINTS = ['#e8ecf0', '#c9d2da', '#aab6c0', '#d5dde4', '#bfc9d2']
@@ -22,7 +24,23 @@ const BASE = {
 
 // 도시별 개성. 없는 도시(직접 추가한 도시)는 이름 해시로 적당히 만들어줌
 const STYLES = {
-  city_01: { river: true, glassRatio: 0.35 }, // 서울
+  // 서울: 한강(넓은 강)이 남서→북동으로 흐르고,
+  // 강 동쪽(발사 타워 쪽)은 유리 고층 강남, 서쪽은 저층 구시가지 + 산(N타워)
+  city_01: {
+    river: true,
+    riverHalf: 30,
+    heightScale: 1.05,
+    mountains: [
+      { x: -480, z: -260, r: 300, h: 58 },
+      { x: -560, z: 80, r: 260, h: 44 },
+      { x: -360, z: -540, r: 240, h: 38 },
+    ],
+    landmark: { type: 'ntower', x: -480, z: -260 },
+    districtFn: (lx, lz, seed, base) =>
+      lx > riverCenterX(lz, seed) ? 0.55 + base * 0.45 : base * 0.32,
+    lowriseFn: (lx, lz, seed) => (lx > riverCenterX(lz, seed) ? 0.1 : 0.62),
+    glassFn: (lx, lz, seed) => (lx > riverCenterX(lz, seed) ? 0.55 : 0.1),
+  },
   city_02: { coast: true, heightScale: 0.95, lowriseRatio: 0.35 }, // 부산
   city_03: { heightScale: 1.3, glassRatio: 0.55, lowriseRatio: 0.12, parkProb: 0.1, river: true }, // 뉴욕
   city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA

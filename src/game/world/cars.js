@@ -9,6 +9,7 @@ import {
   isMajorZ,
   linePosX,
   linePosZ,
+  mountainLevel,
 } from './cityLayout'
 
 const COUNT = 34
@@ -71,6 +72,12 @@ export class CarField {
         continue
       }
       const { x, z } = worldFromLogical(lx, lz, this.seed)
+
+      // 산에는 도로가 없으니 차도 안 다님
+      if (mountainLevel(x, z) > 0.22) {
+        car.needsSpawn = true
+        continue
+      }
 
       if (Math.hypot(x - center.x, z - center.z) > 340) {
         car.needsSpawn = true

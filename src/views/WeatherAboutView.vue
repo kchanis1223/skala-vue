@@ -32,7 +32,7 @@ const controls = [
   <div class="about-view">
     <section class="about-hero">
       <h2 class="hero-title">🪁 웨더글라이더</h2>
-      <p class="hero-sub">날씨를 보는 앱에서, 날씨를 <strong>체험하는</strong> 앱으로</p>
+      <p class="hero-sub">세계 각 도시의 날씨를 직접 느껴보세요!</p>
       <p class="hero-desc">
         대시보드에서 도시를 고르면 그 도시의 실제 바람과 비, 밤낮 속에서 종이비행기를 날리는 활공
         게임이 시작됩니다. 오늘 서울에 부는 바람이 곧 여러분의 순풍이 됩니다.

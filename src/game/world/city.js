@@ -6,7 +6,7 @@ import {
   blockSeed,
   districtLevel,
   riverCenterX,
-  RIVER_HALF,
+  riverHalf,
   inSea,
   seaStartX,
   worldFromLogical,
@@ -22,12 +22,13 @@ import {
   linePosZ,
   blockCenterX,
   blockCenterZ,
+  mountainLevel,
 } from './cityLayout'
 
 const CITY_SPAN = 3 // 도시는 ±3청크(±770m)까지. 비행 경계보다 넉넉하게
 const MAX_BUILDINGS = 64 // 계단식 타워는 인스턴스 2개 먹음
 const MAX_GLASS = 24
-const MAX_TREES = 16
+const MAX_TREES = 34 // 산비탈 숲까지 감당해야 해서 여유있게
 const MAX_BUSHES = 14
 const MAX_PONDS = 3
 const MAX_TANKS = 14
@@ -269,12 +270,27 @@ export class CityField {
         }
         // 해변이랑 강가엔 안 지음
         if (style.coast && logicalX > seaStartX(logicalZ, seed) - 30) continue
-        if (style.river && Math.abs(logicalX - riverCenterX(logicalZ, seed)) < RIVER_HALF + 12)
+        if (style.river && Math.abs(logicalX - riverCenterX(logicalZ, seed)) < riverHalf() + 12)
           continue
 
         const { x: centerX, z: centerZ } = worldFromLogical(logicalX, logicalZ, seed)
         const ground = terrainHeight(centerX, centerZ)
         const district = districtLevel(logicalX, logicalZ, seed)
+
+        // 산비탈: 건물 대신 숲. 나무를 촘촘하게 심음
+        const mLv = mountainLevel(centerX, centerZ)
+        if (mLv > 0.22) {
+          for (let t = 0; t < 7 && n.t < MAX_TREES; t++) {
+            const p1 = blockSeed(bx, bz, seed, t + 33)
+            const p2 = blockSeed(bx, bz, seed, t + 44)
+            const wx = centerX + (p1 - 0.5) * BLOCK
+            const wz = centerZ + (p2 - 0.5) * BLOCK
+            if (mountainLevel(wx, wz) < 0.2) continue
+            const sc = 0.9 + p2 * 1.3
+            this.place(entry.trees, n.t++, wx, terrainHeight(wx, wz) + 3 * sc, wz, sc, sc, sc)
+          }
+          continue
+        }
 
         if (parkAt(logicalX, logicalZ, seed, style)) {
           // 공원 얼룩: 나무 + 덤불 + 가끔 연못
@@ -350,7 +366,11 @@ export class CityField {
         const { x: bwx, z: bwz } = worldFromLogical(plan.cx, plan.cz, seed)
         const bGround = terrainHeight(bwx, bwz)
 
-        const isGlass = !isLow && h > 45 && r4 < style.glassRatio
+        // 유리 타워 비율도 구역 규칙이 있으면 위치 따라 (강남은 유리, 강북은 콘크리트)
+        const glassRatio = style.glassFn
+          ? style.glassFn(logicalX, logicalZ, seed)
+          : style.glassRatio
+        const isGlass = !isLow && h > 45 && r4 < glassRatio
         const targetMesh = isGlass ? entry.glass : entry.buildings
         const idx = isGlass ? n.g : n.b
         if (isGlass && n.g >= MAX_GLASS - 1) continue
@@ -424,6 +444,7 @@ export class CityField {
     const putDash = (dlx, dlz, rotY) => {
       if (inSea(dlx, dlz, seed, style)) return
       const dw = worldFromLogical(dlx, dlz, seed)
+      if (mountainLevel(dw.x, dw.z) > 0.24) return // 산엔 도로가 없음
       const onBridge = style.river && inRiver(dlx, dlz, seed)
       const y = onBridge ? BRIDGE_TOP + 0.12 : terrainHeight(dw.x, dw.z) + 0.12
       this.place(entry.dashes, n.da++, dw.x, y, dw.z, 1, 1, 1, rotY)
@@ -453,7 +474,7 @@ export class CityField {
         if (lz0 < oz - half || lz0 >= oz + half) continue
         const rx = riverCenterX(lz0, seed)
         if (rx > ox - half - 30 && rx < ox + half + 30) {
-          putBridge(rx, lz0, RIVER_HALF * 2 + 20, true)
+          putBridge(rx, lz0, riverHalf() * 2 + 20, true)
         }
       }
       // 세로 대로(x=일정선)가 강을 z방향으로 건너는 경우
@@ -463,7 +484,7 @@ export class CityField {
         if (lx0 < ox - half || lx0 >= ox + half) continue
         let segStart = null
         for (let z = oz - half; z <= oz + half + 8; z += 8) {
-          const crossing = z <= oz + half && Math.abs(lx0 - riverCenterX(z, seed)) < RIVER_HALF + 4
+          const crossing = z <= oz + half && Math.abs(lx0 - riverCenterX(z, seed)) < riverHalf() + 4
           if (crossing && segStart === null) segStart = z
           if (!crossing && segStart !== null) {
             const mid = (segStart + z - 8) / 2
