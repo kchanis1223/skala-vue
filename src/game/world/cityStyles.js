@@ -2,7 +2,7 @@
 // heightScale: 전체 높이 배율 / glassRatio: 유리 타워 비율 / lowriseRatio: 저층 상가 비율
 // parkProb: 공원 블록 확률 / river: 강 유무 / tints: 건물 색조
 // 전용 맵 도시는 여기에 산(mountains)/구역 규칙(districtFn 등)/랜드마크까지 얹음
-import { riverCenterX, worldFromLogical, hillLevel } from './cityLayout'
+import { riverCenterX, worldFromLogical, hillLevel, seaStartX } from './cityLayout'
 
 const DEFAULT_TINTS = ['#ffffff', '#dfe7ee', '#cdd8e3', '#e8e2d5', '#f2f5f8']
 const PASTEL_TINTS = ['#f2e2d2', '#e6d3e0', '#d3e2ec', '#f5eeda', '#dcebd8', '#f0dcd3']
@@ -104,8 +104,38 @@ const STYLES = {
     },
     districtFn: (lx, lz, seed, base) => 0.25 + base * 0.35,
   },
-  city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22, coast: true }, // 리우
-  city_07: { glassRatio: 0.45, parkProb: 0.18, coast: true }, // 시드니
+  // 리우: 동쪽 해변 + 가파른 바위산 2개(정상에 조형물) + 파벨라 언덕
+  // 해변가엔 호텔 라인(중층), 내륙은 알록달록 저층
+  city_06: {
+    coast: true,
+    heightScale: 0.75,
+    parkProb: 0.2,
+    tints: PASTEL_TINTS,
+    mountains: [
+      { x: -360, z: 200, r: 190, h: 95 },
+      { x: -150, z: -430, r: 170, h: 78 },
+      { x: -340, z: -140, r: 250, h: 30, homes: true }, // 파벨라 언덕
+    ],
+    landmark: { type: 'cristo', x: -360, z: 200 },
+    districtFn: (lx, lz, seed, base) => {
+      // 해변에서 150m 안쪽은 호텔 라인
+      if (lx > seaStartX(lz, seed) - 160) return 0.42 + base * 0.3
+      return base * 0.22
+    },
+    lowriseFn: (lx, lz, seed) => (lx > seaStartX(lz, seed) - 160 ? 0.2 : 0.72),
+    glassFn: (lx, lz, seed) => (lx > seaStartX(lz, seed) - 160 ? 0.35 : 0.05),
+  },
+  // 시드니: 바다가 도심 안쪽으로 파고드는 만(灣) + 물가 오페라하우스 + 하버브리지
+  // 만 남쪽은 유리 CBD, 북쪽은 저층 주택가
+  city_07: {
+    coast: true,
+    glassRatio: 0.5,
+    parkProb: 0.18,
+    seaFn: (lz) => 300 - 185 * Math.exp(-(((lz + 30) / 150) ** 2)),
+    landmark: { type: 'sydney', operaX: 160, operaZ: 60, bridgeX: 210, bridgeZ: -60, bridgeLen: 200 },
+    districtFn: (lx, lz, seed, base) => (lz > 40 ? 0.5 + base * 0.4 : base * 0.3),
+    lowriseFn: (lx, lz) => (lz > 40 ? 0.15 : 0.55),
+  },
   // 두바이: 페르시아만 해안 + 모래 바닥, 중심부에만 초고층이 몰리고
   // 외곽으로 갈수록 건물이 사막에 잠기듯 드문드문. 정중앙엔 독보적인 부르즈 타워
   city_08: {
@@ -153,7 +183,16 @@ const STYLES = {
   },
   city_12: { heightScale: 0.85, river: true }, // 런던
   city_13: { heightScale: 0.8, parkProb: 0.24, river: true }, // 베를린
-  city_14: { heightScale: 0.7, lowriseRatio: 0.4, coast: true }, // 케이프타운
+  // 케이프타운: 서쪽에 꼭대기가 판판한 테이블마운틴(발사 타워보다 살짝 높음 — 정상 착지 가능)
+  // 산기슭과 동쪽 바다 사이 좁은 띠에 중저층 도시
+  city_14: {
+    coast: true,
+    heightScale: 0.7,
+    lowriseRatio: 0.42,
+    mountains: [{ x: -430, z: -60, r: 330, h: 108, mesa: true }],
+    landmark: { type: 'cable', x: -360, z: -40 },
+    districtFn: (lx, lz, seed, base) => 0.2 + base * 0.35,
+  },
   city_15: { heightScale: 1.15, glassRatio: 0.4, parkProb: 0.12 }, // 베이징
 }
 

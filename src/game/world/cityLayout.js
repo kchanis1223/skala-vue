@@ -35,9 +35,11 @@ export const setLayoutStyle = (style) => {
 }
 
 // 산: 스타일에 봉우리 목록이 있으면 그 주변이 산이 됨 (0~1)
+// mesa 옵션이면 테이블마운틴처럼 꼭대기가 평평해짐
 const peakFactor = (x, z, m) => {
   const d = Math.hypot(x - m.x, z - m.z)
-  return smooth(Math.max(1 - d / m.r, 0))
+  const t = Math.max(1 - d / m.r, 0)
+  return smooth(m.mesa ? Math.min(t / 0.5, 1) : t)
 }
 
 // 숲 산 (건물/도로 금지). homes 언덕은 여기서 제외됨
@@ -71,7 +73,10 @@ export const mountainHeight = (x, z) => {
   let h = 0
   for (const m of peaks) {
     const t = peakFactor(x, z, m)
-    if (t > 0) h += Math.pow(t, 1.35) * m.h * (0.82 + noise2d(x, z, 55, 913) * 0.36)
+    if (t <= 0) continue
+    // 메사는 정상이 판판해야 해서 요철을 거의 안 줌
+    if (m.mesa) h += t * m.h * (0.97 + noise2d(x, z, 55, 913) * 0.06)
+    else h += Math.pow(t, 1.35) * m.h * (0.82 + noise2d(x, z, 55, 913) * 0.36)
   }
   return h
 }
@@ -260,8 +265,11 @@ export const RIVER_PARK = 26
 export const inRiver = (lx, lz, seed = 0) => Math.abs(lx - riverCenterX(lz, seed)) < riverHalf()
 
 // 해안선. 이보다 +x쪽은 바다 (해안 도시만)
-export const seaStartX = (lz, seed = 0) =>
-  300 + Math.sin(lz * 0.0011 + seed) * 70 + Math.sin(lz * 0.0035 - seed * 2) * 25
+// 시드니처럼 만이 도심으로 파고드는 도시는 스타일이 직접 정의함
+export const seaStartX = (lz, seed = 0) => {
+  if (layoutStyle?.seaFn) return layoutStyle.seaFn(lz, seed)
+  return 300 + Math.sin(lz * 0.0011 + seed) * 70 + Math.sin(lz * 0.0035 - seed * 2) * 25
+}
 
 export const inSea = (lx, lz, seed, style) => !!style?.coast && lx > seaStartX(lz, seed)
 

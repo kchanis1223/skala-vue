@@ -17,6 +17,9 @@ export class Landmarks {
     if (spec?.type === 'burj') this.buildBurj(spec, isNight)
     if (spec?.type === 'eiffel') this.buildEiffel(spec, isNight)
     if (spec?.type === 'stalin') for (const t of spec.towers) this.buildStalin(t, isNight)
+    if (spec?.type === 'cristo') this.buildCristo(spec, isNight)
+    if (spec?.type === 'sydney') this.buildSydney(spec, isNight)
+    if (spec?.type === 'cable') this.buildCableStation(spec)
 
     scene.add(this.group)
   }
@@ -283,6 +286,100 @@ export class Landmarks {
     spire.position.set(spec.x, y + 12, spec.z)
     g.add(spire)
     this.boxes.push({ x: spec.x, z: spec.z, hw: 1.6, hd: 1.6, top: y + 24 })
+  }
+
+  // 산 정상의 양팔 벌린 상. 밤엔 위에서 빛남
+  buildCristo(spec, isNight) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const white = this.mat('#e8e4da', {
+      emissive: isNight ? '#fff3d0' : '#000000',
+      emissiveIntensity: isNight ? 0.55 : 0,
+    })
+    const base = new THREE.Mesh(this.geo(new THREE.BoxGeometry(6, 8, 6)), this.mat('#a89f90'))
+    base.position.set(spec.x, ground + 4, spec.z)
+    const body = new THREE.Mesh(this.geo(new THREE.BoxGeometry(3, 16, 3)), white)
+    body.position.set(spec.x, ground + 16, spec.z)
+    const arms = new THREE.Mesh(this.geo(new THREE.BoxGeometry(18, 2.4, 2.4)), white)
+    arms.position.set(spec.x, ground + 20, spec.z)
+    const head = new THREE.Mesh(this.geo(new THREE.SphereGeometry(1.4, 6, 6)), white)
+    head.position.set(spec.x, ground + 25.4, spec.z)
+    g.add(base, body, arms, head)
+    this.boxes.push({ x: spec.x, z: spec.z, hw: 9, hd: 2, top: ground + 26 })
+  }
+
+  // 오페라하우스(겹치는 쉘 지붕) + 만 위 하버브리지(아치)
+  buildSydney(spec, isNight) {
+    const g = this.group
+    const shellMat = this.mat('#f4f1e8', { side: THREE.DoubleSide })
+
+    // 물가 받침 플랫폼
+    const podium = new THREE.Mesh(this.geo(new THREE.BoxGeometry(40, 4, 26)), this.mat('#cfc9b8'))
+    podium.position.set(spec.operaX, 2, spec.operaZ)
+    g.add(podium)
+    // 쉘 3장: 반구를 4분의 1만 잘라서 겹쳐 세움
+    for (let i = 0; i < 3; i++) {
+      const r = 13 - i * 3
+      const shell = new THREE.Mesh(
+        this.geo(new THREE.SphereGeometry(r, 10, 8, 0, Math.PI, 0, Math.PI / 2)),
+        shellMat,
+      )
+      shell.position.set(spec.operaX - 12 + i * 11, 4, spec.operaZ)
+      shell.rotation.y = -Math.PI / 2
+      shell.rotation.x = -0.18
+      g.add(shell)
+    }
+    this.boxes.push({ x: spec.operaX, z: spec.operaZ, hw: 20, hd: 13, top: 17 })
+
+    // 하버브리지: 만 위 상판 + 반원 아치 2개
+    const deckY = 14
+    const deck = new THREE.Mesh(
+      this.geo(new THREE.BoxGeometry(spec.bridgeLen, 1.5, 11)),
+      this.mat('#5b6672'),
+    )
+    deck.position.set(spec.bridgeX, deckY, spec.bridgeZ)
+    g.add(deck)
+    this.boxes.push({
+      x: spec.bridgeX,
+      z: spec.bridgeZ,
+      hw: spec.bridgeLen / 2,
+      hd: 5.5,
+      top: deckY + 0.8,
+      bottom: deckY - 1.2,
+    })
+    const archMat = this.mat('#3f4a52', {
+      emissive: isNight ? '#7fd8ff' : '#000000',
+      emissiveIntensity: isNight ? 0.5 : 0,
+    })
+    for (const dz of [-5, 5]) {
+      const arch = new THREE.Mesh(
+        this.geo(new THREE.TorusGeometry(spec.bridgeLen * 0.36, 1.1, 6, 24, Math.PI)),
+        archMat,
+      )
+      arch.position.set(spec.bridgeX, deckY, spec.bridgeZ + dz)
+      g.add(arch)
+    }
+    // 아치 정점 충돌 (대충 가운데 상단만)
+    this.boxes.push({
+      x: spec.bridgeX,
+      z: spec.bridgeZ,
+      hw: spec.bridgeLen * 0.2,
+      hd: 7,
+      top: deckY + spec.bridgeLen * 0.36 + 2,
+      bottom: deckY + spec.bridgeLen * 0.2,
+    })
+  }
+
+  // 테이블마운틴 정상의 케이블카 상부역
+  buildCableStation(spec) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const hut = new THREE.Mesh(this.geo(new THREE.BoxGeometry(10, 6, 8)), this.mat('#8a9199'))
+    hut.position.set(spec.x, ground + 3, spec.z)
+    const roof = new THREE.Mesh(this.geo(new THREE.BoxGeometry(12, 1, 10)), this.mat('#5b6672'))
+    roof.position.set(spec.x, ground + 6.5, spec.z)
+    g.add(hut, roof)
+    this.boxes.push({ x: spec.x, z: spec.z, hw: 6, hd: 5, top: ground + 7 })
   }
 
   collides(x, y, z) {
