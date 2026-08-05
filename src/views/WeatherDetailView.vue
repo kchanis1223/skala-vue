@@ -121,8 +121,8 @@ const goGlider = () => {
             {{ isCityNight ? '🌙' : '🕓' }} {{ localTime }}
           </span>
         </p>
-        <p v-if="cityInfo.temp >= 25" class="detail-label">🔥 더움 (25도 이상)</p>
-        <p v-else class="detail-label">❄️ 선선함 (25도 미만)</p>
+        <p v-if="cityInfo.temp >= 25" class="detail-label">🔥 더운 날씨예요</p>
+        <p v-else class="detail-label">❄️ 선선한 날씨예요</p>
 
         <ul class="detail-info">
           <li v-if="cityInfo.feelsLike != null">🌡️ 체감 {{ cityInfo.feelsLike }}℃</li>

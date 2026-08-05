@@ -57,9 +57,9 @@ const isNight = computed(() => {
       {{ displayTemp }}{{ configStore.unitSymbol }}
     </p>
 
-    <!-- 25도 기준 라벨. 화씨로 바꿔도 기준은 섭씨 원본값으로 -->
-    <span v-if="cityItem.temp >= 25" class="temp-badge hot">🔥 더움 (25도 이상)</span>
-    <span v-else class="temp-badge cool">❄️ 선선함 (25도 미만)</span>
+    <!-- 25도 기준. 화씨로 바꿔도 기준은 섭씨 원본값으로 -->
+    <span v-if="cityItem.temp >= 25" class="temp-badge hot">🔥 더운 날씨</span>
+    <span v-else class="temp-badge cool">❄️ 선선한 날씨</span>
 
     <p v-if="cityItem.feelsLike != null" class="card-extra">
       체감 {{ displayFeels }}{{ configStore.unitSymbol }} · 습도 {{ cityItem.humidity }}% · 바람

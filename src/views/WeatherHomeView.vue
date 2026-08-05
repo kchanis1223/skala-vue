@@ -1,6 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import WeatherParent from '@/components/exercise/WeatherParent.vue'
+import WeatherParent from '@/components/dashboard/WeatherParent.vue'
 import { useFlightStore } from '@/stores/flightStore'
 
 // 밤 테마 배경에선 검은 글씨가 안 보여서 제목 색을 같이 바꿔줌

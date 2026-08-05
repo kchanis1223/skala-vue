@@ -11,8 +11,8 @@
 
 ## 수업에서 배운 걸로 만든 것들
 
-- **Vue 문법 · Composition API** — 날씨 카드를 `v-for`로 뿌리고, 검색 필터는 `computed`,
-  선택 변화 추적은 `watch`/`watchEffect`로. 한글 검색창은 조합 문제 때문에 `v-model` 대신 `:value`+`@input`을 썼습니다
+- **Vue 문법 · Composition API** — 날씨 카드를 `v-for`로 뿌리고, 검색·필터·정렬은 `computed` 체인으로,
+  도시 목록 변화 감지와 설정 저장은 `watch`로. 한글 검색창은 조합 문제 때문에 `v-model` 대신 `:value`+`@input`을 썼습니다
 - **컴포넌트** — 대시보드를 slot·props·emit으로 4개 컴포넌트로 분리했고,
   three.js 정리는 `onUnmounted`에서 하도록 라이프사이클을 활용했습니다
 - **Router** — 동적 경로(`/weather/:cityId`)와 404 Catch-all, 전 라우트 지연 로딩
@@ -48,7 +48,7 @@ src/
 │   ├── RecordsView          # 주간 랭킹·도시별 최고·내 기록
 │   └── WeatherAboutView / NotFoundView
 ├── components/
-│   ├── exercise/            # 대시보드 부품 — WeatherParent(상태 소유)·WeatherCard·SearchBar·BaseDashboardCard(slot)·UnitToggler
+│   ├── dashboard/           # 대시보드 부품 — WeatherParent(상태 소유)·WeatherCard·SearchBar·BaseDashboardCard(slot)·UnitToggler
 │   ├── glider/              # 게임 UI — GliderCanvas(three.js 어댑터)·FlightBriefing·FlightHud·CompassBar·FlightResultDialog
 │   ├── AddCityDialog        # Geocoding 검색으로 도시 추가
 │   └── WeatherThemeBackground / ThemePreviewDock   # 날씨·밤낮 연동 배경

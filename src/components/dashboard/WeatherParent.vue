@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, watchEffect, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseDashboardCard from './BaseDashboardCard.vue'
 import SearchBar from './SearchBar.vue'
@@ -18,7 +18,6 @@ const cityStore = useCityStore()
 // 상태는 전부 여기(부모)서 관리하고 자식한테는 props로 내려줌
 const weatherList = ref([...cityStore.allCities])
 const searchQuery = ref('')
-const selectedCityInfo = ref(null)
 const conditionFilter = ref('all')
 const sortKey = ref('default')
 const showAddDialog = ref(false)
@@ -52,27 +51,15 @@ const filteredWeatherList = computed(() => {
   return list
 })
 
-// 선택 도시 바뀔 때 확인용 로그
-watch(selectedCityInfo, (newCity, oldCity) => {
-  console.log(`[watch] 선택 도시 변경: ${oldCity?.name ?? '없음'} → ${newCity?.name ?? '없음'}`)
-})
-
-// watchEffect는 안에서 쓴 값을 알아서 추적함 (처음에 한 번 바로 실행됨)
-watchEffect(() => {
-  console.log(`[watchEffect] 현재 검색어: "${searchQuery.value}"`)
-})
-
 const updateQuery = (query) => {
   searchQuery.value = query
 }
 
+// 카드 선택 → 배경 테마가 그 도시 날씨로 바뀜
 const selectCard = (city) => {
-  selectedCityInfo.value = city
-  // 배경 테마도 선택한 도시 날씨로 바뀌게 스토어에도 올림
   flightStore.selectCity(city)
 }
 
-// 상세보기는 원래 alert였는데 라우터 배우고 페이지 이동으로 바꿈
 const goDetail = (city) => {
   router.push(`/weather/${city.id}`)
 }

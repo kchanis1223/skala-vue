@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import UnitToggler from '@/components/exercise/UnitToggler.vue'
+import UnitToggler from '@/components/dashboard/UnitToggler.vue'
 import WeatherThemeBackground from '@/components/WeatherThemeBackground.vue'
 import ThemePreviewDock from '@/components/ThemePreviewDock.vue'
 import { useFlightStore } from '@/stores/flightStore'
