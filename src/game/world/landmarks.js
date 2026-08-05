@@ -14,6 +14,7 @@ export class Landmarks {
     if (spec?.type === 'ntower') this.buildNTower(spec, isNight)
     if (spec?.type === 'gwangan') this.buildGwangan(spec, isNight)
     if (spec?.type === 'empire') this.buildEmpire(spec, isNight)
+    if (spec?.type === 'burj') this.buildBurj(spec, isNight)
 
     scene.add(this.group)
   }
@@ -155,6 +156,44 @@ export class Landmarks {
       this.mat('#ff3b30', { emissive: '#ff3b30', emissiveIntensity: isNight ? 1 : 0.4 }),
     )
     beacon.position.set(spec.x, y + 26.8, spec.z)
+    g.add(beacon)
+  }
+
+  // 부르즈풍 초고층. 발사 타워보다 3배 높아서 스카이라인을 지배함
+  buildBurj(spec, isNight) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const glass = this.mat('#bcd8e8', {
+      emissive: isNight ? '#ffd97a' : '#000000',
+      emissiveIntensity: isNight ? 0.3 : 0,
+    })
+    // 6각 기둥이 위로 갈수록 좁아지는 3단 테이퍼
+    const tiers = [
+      { r: 26, h: 120 },
+      { r: 17, h: 90 },
+      { r: 9, h: 60 },
+    ]
+    let y = ground
+    for (const t of tiers) {
+      const seg = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(t.r * 0.72, t.r, t.h, 6)), glass)
+      seg.position.set(spec.x, y + t.h / 2, spec.z)
+      g.add(seg)
+      this.boxes.push({ x: spec.x, z: spec.z, hw: t.r * 0.9, hd: t.r * 0.9, top: y + t.h })
+      y += t.h
+    }
+    const spire = new THREE.Mesh(
+      this.geo(new THREE.CylinderGeometry(0.25, 2.2, 45, 6)),
+      this.mat('#9fb3bf'),
+    )
+    spire.position.set(spec.x, y + 22.5, spec.z)
+    g.add(spire)
+    this.boxes.push({ x: spec.x, z: spec.z, hw: 2, hd: 2, top: y + 45 })
+
+    const beacon = new THREE.Mesh(
+      this.geo(new THREE.SphereGeometry(1, 6, 6)),
+      this.mat('#ff3b30', { emissive: '#ff3b30', emissiveIntensity: isNight ? 1 : 0.4 }),
+    )
+    beacon.position.set(spec.x, y + 46, spec.z)
     g.add(beacon)
   }
 

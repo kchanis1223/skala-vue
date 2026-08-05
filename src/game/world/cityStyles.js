@@ -89,13 +89,29 @@ const STYLES = {
   city_05: { heightScale: 0.9, glassRatio: 0.18, tints: COLD_TINTS }, // 모스크바
   city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22, coast: true }, // 리우
   city_07: { glassRatio: 0.45, parkProb: 0.18, coast: true }, // 시드니
+  // 두바이: 페르시아만 해안 + 모래 바닥, 중심부에만 초고층이 몰리고
+  // 외곽으로 갈수록 건물이 사막에 잠기듯 드문드문. 정중앙엔 독보적인 부르즈 타워
   city_08: {
-    heightScale: 1.55,
-    glassRatio: 0.6,
-    lowriseRatio: 0.15,
-    parkProb: 0.05,
-    plazaProb: 0.2,
-    lotColor: '#cbb37f', // 두바이는 모래빛 바닥
+    coast: true,
+    heightScale: 1.5,
+    glassRatio: 0.62,
+    lowriseRatio: 0.18,
+    parkProb: 0.04,
+    plazaProb: 0.12,
+    lotColor: '#cbb37f',
+    landmark: { type: 'burj', x: 150, z: -170 },
+    districtFn: (lx, lz, seed, base) => {
+      const d = Math.hypot(lx - 150, lz + 170)
+      if (d < 160) return 0.7 + base * 0.3
+      if (d > 480) return base * 0.15
+      const t = (d - 160) / 320
+      return (0.7 + base * 0.3) * (1 - t) + base * 0.15 * t
+    },
+    buildProbFn: (lx, lz) => {
+      const d = Math.hypot(lx - 150, lz + 170)
+      if (d < 220) return 1
+      return Math.max(1 - (d - 220) / 420, 0.18)
+    },
   },
   city_09: { heightScale: 0.85, lowriseRatio: 0.45, parkProb: 0.1, coast: true }, // 마닐라
   city_10: {
