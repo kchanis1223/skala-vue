@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCityStore } from '@/stores/cityStore'
 import { useConfigStore } from '@/stores/configStore'
+import { useClock } from '@/composables/useClock'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
 import { useFlightDb } from '@/composables/useFlightDb'
@@ -56,6 +57,21 @@ onMounted(async () => {
 
 const { displayTemp } = useDisplayTemp(() => cityInfo.value?.temp)
 
+// 카드랑 같은 방식으로 도시 현지 시각 표시
+const now = useClock()
+const localTime = computed(() => {
+  if (cityInfo.value?.timezone == null) return null
+  const d = new Date(now.value + cityInfo.value.timezone * 1000)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+})
+
+const isCityNight = computed(() => {
+  const { sunrise, sunset } = cityInfo.value ?? {}
+  if (!sunrise || !sunset) return false
+  const t = now.value / 1000
+  return t < sunrise || t > sunset
+})
+
 // 미세먼지 등급 (환경부 기준 참고)
 const pmGrade = computed(() => {
   const pm = cityInfo.value?.pm25
@@ -99,7 +115,12 @@ const goGlider = () => {
           title="API 연결이 안돼서 예시 데이터를 보여주는 중입니다."
         />
 
-        <p class="detail-temp">{{ displayTemp }}{{ configStore.unitSymbol }}</p>
+        <p class="detail-temp">
+          {{ displayTemp }}{{ configStore.unitSymbol }}
+          <span v-if="localTime" class="detail-time">
+            {{ isCityNight ? '🌙' : '🕓' }} {{ localTime }}
+          </span>
+        </p>
         <p v-if="cityInfo.temp >= 25" class="detail-label">🔥 더움 (25도 이상)</p>
         <p v-else class="detail-label">❄️ 선선함 (25도 미만)</p>
 
@@ -204,6 +225,16 @@ const goGlider = () => {
   margin: 0;
   font-size: 2.4rem;
   font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+/* 온도보다 살짝만 작게 */
+.detail-time {
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #606266;
 }
 
 .detail-label {
