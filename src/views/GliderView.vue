@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCityStore } from '@/stores/cityStore'
 import { useFlightStore } from '@/stores/flightStore'
 import { useWeatherApi } from '@/composables/useWeatherApi'
+import { useFlightDb } from '@/composables/useFlightDb'
 import { toFlightParams } from '@/game/weatherMapping'
 import GliderCanvas from '@/components/glider/GliderCanvas.vue'
 import CompassBar from '@/components/glider/CompassBar.vue'
@@ -15,6 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const cityStore = useCityStore()
 const flightStore = useFlightStore()
+const flightDb = useFlightDb()
 const { isLoading, fetchCityDetail } = useWeatherApi()
 
 // select(도시 고르기) → briefing(브리핑) → flying(비행) → ended(결과)
@@ -85,6 +87,19 @@ const onEnd = (r) => {
     ...r,
     cityId: city.value.id,
     cityName: city.value.name,
+    flownAt: Date.now(),
+  })
+  // 리더보드용으로 DB에도 저장
+  flightDb.addFlight({
+    cityId: city.value.id,
+    cityName: city.value.name,
+    score: r.stars,
+    distance: r.distance,
+    duration: r.duration,
+    crashed: r.crashed,
+    condition: city.value.condition,
+    windSpeed: city.value.windSpeed,
+    temp: city.value.temp,
     flownAt: Date.now(),
   })
 }
