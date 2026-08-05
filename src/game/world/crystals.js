@@ -72,9 +72,15 @@ export class CrystalField {
     this.dummy = new THREE.Object3D()
 
     // 먹는 순간 크리스탈 잔상이 확 퍼지며 사라지는 버스트 풀
+    // 가산 블렌딩 + depthWrite 끔: 빛처럼 더해지기만 해서 뒤의 크리스탈을 안 가림
     this.bursts = []
     for (let i = 0; i < 8; i++) {
-      const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+      const mat = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
       const mesh = new THREE.Mesh(this.geo, mat)
       mesh.visible = false
       scene.add(mesh)

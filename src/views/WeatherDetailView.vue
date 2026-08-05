@@ -9,6 +9,7 @@ import { useWeatherApi } from '@/composables/useWeatherApi'
 import { useFlightDb } from '@/composables/useFlightDb'
 import { useLeaderboardApi } from '@/composables/useLeaderboardApi'
 import { useFlightStore } from '@/stores/flightStore'
+import { windBonus } from '@/game/weatherMapping'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +83,9 @@ const pmGrade = computed(() => {
   return { label: '매우나쁨', type: 'danger' }
 })
 
+// 바람 세면 순풍 추진 덕에 점수 내기 좋은 날이라 배지로 알려줌
+const windTag = computed(() => windBonus(cityInfo.value?.windSpeed))
+
 const RANK_ICONS = ['🥇', '🥈', '🥉']
 
 const formatDate = (ts) => {
@@ -126,7 +130,12 @@ const goGlider = () => {
 
         <ul class="detail-info">
           <li v-if="cityInfo.feelsLike != null">🌡️ 체감 {{ cityInfo.feelsLike }}℃</li>
-          <li v-if="cityInfo.windSpeed != null">💨 바람 {{ cityInfo.windSpeed }}m/s</li>
+          <li v-if="cityInfo.windSpeed != null">
+            💨 바람 {{ cityInfo.windSpeed }}m/s
+            <el-tag v-if="windTag" size="small" :type="windTag.type" effect="light">
+              {{ windTag.emoji }} {{ windTag.label }}
+            </el-tag>
+          </li>
           <li v-if="cityInfo.humidity != null">💧 습도 {{ cityInfo.humidity }}%</li>
           <li v-if="pmGrade">
             😷 미세먼지(PM2.5)

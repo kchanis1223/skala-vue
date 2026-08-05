@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { THEMES } from '@/utils/weatherTheme'
-import { flightDifficulty } from '@/game/weatherMapping'
+import { flightDifficulty, windBonus } from '@/game/weatherMapping'
 
 const props = defineProps({
   city: { type: Object, required: true },
@@ -25,7 +25,12 @@ const stats = computed(() => {
   const p = props.flightParams
   const list = [
     { emoji: themeInfo.value.emoji, label: '날씨', value: props.city.status },
-    { emoji: '💨', label: '바람', value: `${windDirLabel.value}풍 ${p.wind.speed}m/s` },
+    {
+      emoji: '💨',
+      label: '바람',
+      value: `${windDirLabel.value}풍 ${p.wind.speed}m/s`,
+      badge: windBonus(p.wind.speed),
+    },
     {
       emoji: p.isNight ? '🌙' : '☀️',
       label: '시간대',
@@ -70,6 +75,9 @@ const cautions = [
           <span class="stat-emoji">{{ s.emoji }}</span>
           <span class="stat-label">{{ s.label }}</span>
           <span class="stat-value">{{ s.value }}</span>
+          <span v-if="s.badge" class="stat-bonus" :class="`bonus-${s.badge.type}`">
+            {{ s.badge.emoji }} {{ s.badge.label }}
+          </span>
         </div>
       </div>
 
@@ -173,6 +181,25 @@ const cautions = [
   font-weight: 700;
   color: #303133;
   line-height: 1.3;
+}
+
+/* 바람 셀 때 뜨는 점수 찬스 배지 */
+.stat-bonus {
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.bonus-warning {
+  color: #b8860b;
+  background: rgba(230, 162, 60, 0.16);
+}
+
+.bonus-danger {
+  color: #c0392b;
+  background: rgba(245, 108, 108, 0.16);
 }
 
 .goal-box {

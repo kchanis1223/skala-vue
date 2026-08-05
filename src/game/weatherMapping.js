@@ -46,3 +46,11 @@ export const flightDifficulty = (params) => {
   if (params.isNight) level++
   return Math.min(level, 5)
 }
+
+// 바람이 셀수록 순풍 추진이랑 상승을 크게 받아서 점수 내기 좋음
+// 상세/브리핑 화면에서 "이 도시 지금 노려볼 만하다"를 알려주는 용도
+export const windBonus = (speed = 0) => {
+  if (speed >= 4) return { emoji: '🚀', label: '기록 찬스', type: 'danger' }
+  if (speed >= 2) return { emoji: '🪁', label: '바람 보너스', type: 'warning' }
+  return null
+}
