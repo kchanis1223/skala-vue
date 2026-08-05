@@ -563,7 +563,9 @@ export class CityField {
         // 주택1 = 낮고 넓은 단층집 (몸통 하나 + 큰 박공지붕)
         // 주택2 = 2~3층집 (아래층 + 옆으로 물러난 위층 2단 스택 → 테라스가 생김 + 작은 지붕 + 굴뚝)
         if (isLow && n.ho < MAX_HOUSES - 1 && n.rf < MAX_HOUSES) {
-          const twoStory = blockSeed(bx, bz, seed, 12) < 0.5
+          // blockSeed가 이 salt 조합에선 0.5 밑으로 쏠려서 (해시 편향)
+          // 한 번 더 섞어줘야 진짜 반반이 됨
+          const twoStory = (blockSeed(bx, bz, seed, 12) * 43758.5453) % 1 < 0.5
           const hBurial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
           // 주택가는 절반쯤 원색이라 제일 알록달록함. 위아래층은 같은 색
           // (this.color를 공유하니까 clone으로 떼어둠)
