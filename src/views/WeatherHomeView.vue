@@ -11,7 +11,7 @@ const { isNight } = storeToRefs(useFlightStore())
   <div class="home-view">
     <header class="hero" :class="{ 'hero-dark': isNight }">
       <h1 class="hero-title">🪁 웨더글라이더</h1>
-      <p class="hero-sub">도시를 선택하고 날씨를 느껴보세요!</p>
+      <p class="hero-sub">도시를 선택하고 직접 비행하며 날씨를 느껴보세요 !</p>
     </header>
 
     <WeatherParent />
@@ -27,13 +27,17 @@ const { isNight } = storeToRefs(useFlightStore())
   margin: 0;
   font-size: 1.6rem;
   color: #1e2023;
-  transition: color 0.9s ease, text-shadow 0.9s ease;
+  transition:
+    color 0.9s ease,
+    text-shadow 0.9s ease;
 }
 
 .hero-sub {
   margin: 6px 0 0;
   color: #1e2023;
-  transition: color 0.9s ease, text-shadow 0.9s ease;
+  transition:
+    color 0.9s ease,
+    text-shadow 0.9s ease;
 }
 
 /* 밤 배경일 땐 밝은 글씨 + 은은한 그림자로 띄움 */

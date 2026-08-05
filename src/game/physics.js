@@ -50,9 +50,12 @@ export const stepFlight = (state, input, env, dt) => {
   const sink = BASE_SINK * (1 + env.precip * 1.1) + stall
 
   // 진행방향 바람 성분(+면 순풍): 순풍은 띄워주고 역풍은 아래로 눌러버림
+  // 순풍 쪽을 더 세게 쳐줘서 바람만 잘 타면 수평 자세로도 슬금슬금 상승함
+  // (그래야 고도를 지키면서 맵을 돌아다닐 수 있음)
   const alongWind = env.wind.x * fx0 + env.wind.z * fz0
   state.alongWind = alongWind
-  state.vy = state.speed * Math.sin(state.pitch) - sink + clamp(alongWind * 0.25, -1.6, 1.6)
+  const windLift = alongWind > 0 ? clamp(alongWind * 0.55, 0, 2.6) : clamp(alongWind * 0.25, -1.6, 0)
+  state.vy = state.speed * Math.sin(state.pitch) - sink + windLift
 
   // yaw 기준 전진 방향 (-z가 정면)
   const fx = -Math.sin(state.yaw)
