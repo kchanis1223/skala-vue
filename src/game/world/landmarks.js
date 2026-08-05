@@ -13,6 +13,7 @@ export class Landmarks {
     const spec = style?.landmark
     if (spec?.type === 'ntower') this.buildNTower(spec, isNight)
     if (spec?.type === 'gwangan') this.buildGwangan(spec, isNight)
+    if (spec?.type === 'empire') this.buildEmpire(spec, isNight)
 
     scene.add(this.group)
   }
@@ -119,6 +120,42 @@ export class Landmarks {
         g.add(cable)
       }
     }
+  }
+
+  // 엠파이어풍 계단식 첨탑 타워. 도시에서 제일 높음
+  buildEmpire(spec, isNight) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const stone = this.mat('#d9d2c4')
+    const tiers = [
+      { w: 42, h: 110 },
+      { w: 30, h: 62 },
+      { w: 19, h: 40 },
+      { w: 10, h: 18 },
+    ]
+    let y = ground
+    for (const t of tiers) {
+      const box = new THREE.Mesh(this.geo(new THREE.BoxGeometry(t.w, t.h, t.w)), stone)
+      box.position.set(spec.x, y + t.h / 2, spec.z)
+      g.add(box)
+      this.boxes.push({ x: spec.x, z: spec.z, hw: t.w / 2, hd: t.w / 2, top: y + t.h })
+      y += t.h
+    }
+    const spire = new THREE.Mesh(
+      this.geo(new THREE.CylinderGeometry(0.3, 1.2, 26, 6)),
+      this.mat('#aeb6bd'),
+    )
+    spire.position.set(spec.x, y + 13, spec.z)
+    g.add(spire)
+    this.boxes.push({ x: spec.x, z: spec.z, hw: 1.2, hd: 1.2, top: y + 26 })
+
+    // 꼭대기 항공 장애등
+    const beacon = new THREE.Mesh(
+      this.geo(new THREE.SphereGeometry(0.8, 6, 6)),
+      this.mat('#ff3b30', { emissive: '#ff3b30', emissiveIntensity: isNight ? 1 : 0.4 }),
+    )
+    beacon.position.set(spec.x, y + 26.8, spec.z)
+    g.add(beacon)
   }
 
   collides(x, y, z) {

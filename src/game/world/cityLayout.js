@@ -79,10 +79,14 @@ export const mountainHeight = (x, z) => {
 export const blockIndex = (v) => Math.floor(v / BLOCK)
 
 // 격자 비틀기. 월드 → 논리로 갈 때 더하는 오프셋
-export const warpOffset = (x, z, seed = 0) => ({
-  wx: (noise2d(x, z, 230, seed + 501) - 0.5) * 20,
-  wz: (noise2d(x, z, 230, seed + 777) - 0.5) * 20,
-})
+// 맨해튼처럼 자로 잰 격자가 어울리는 도시는 스타일에서 끔
+export const warpOffset = (x, z, seed = 0) => {
+  if (layoutStyle?.gridStraight) return { wx: 0, wz: 0 }
+  return {
+    wx: (noise2d(x, z, 230, seed + 501) - 0.5) * 20,
+    wz: (noise2d(x, z, 230, seed + 777) - 0.5) * 20,
+  }
+}
 
 export const toLogical = (x, z, seed = 0) => {
   const { wx, wz } = warpOffset(x, z, seed)
@@ -103,9 +107,15 @@ export const blockType = (bx, bz, seed = 0, plazaProb = 0.09) => {
   return 'build'
 }
 
+// 지정된 직사각형 대공원 (센트럴파크 같은 것)
+export const inParkRect = (lx, lz) => {
+  const r = layoutStyle?.parkRect
+  return !!r && lx >= r.x0 && lx <= r.x1 && lz >= r.z0 && lz <= r.z1
+}
+
 // 공원은 격자랑 무관한 연속 노이즈 얼룩. 도시의 parkProb가 높을수록 넓어짐
 export const parkAt = (lx, lz, seed = 0, style = null) =>
-  noise2d(lx, lz, 260, seed + 321) > 0.8 - (style?.parkProb ?? 0.15) * 0.8
+  inParkRect(lx, lz) || noise2d(lx, lz, 260, seed + 321) > 0.8 - (style?.parkProb ?? 0.15) * 0.8
 
 // 도로 위계: 몇 줄에 하나씩 넓은 대로, 나머지는 좁은 골목
 // 골목은 구간마다 없는 경우가 더 많아서(35%만 생존) 블록들이 크게 합쳐짐
@@ -113,7 +123,8 @@ export const MAJOR_W = 12
 export const MINOR_W = 5
 
 // 격자선 위치 자체를 선마다 ±8m 밀어서 블록 크기가 제각각이 되게 함
-const lineJitter = (k, seed, salt) => (hash(k * 11 + salt + seed, k * 3 - salt - seed) - 0.5) * 16
+const lineJitter = (k, seed, salt) =>
+  layoutStyle?.gridStraight ? 0 : (hash(k * 11 + salt + seed, k * 3 - salt - seed) - 0.5) * 16
 export const linePosX = (k, seed = 0) => k * BLOCK + lineJitter(k, seed, 5)
 export const linePosZ = (k, seed = 0) => k * BLOCK + lineJitter(k, seed, 77)
 
@@ -139,8 +150,10 @@ export const blockCenterZ = (k, seed = 0) =>
 export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < 0.22
 export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < 0.22
 
-const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < 0.35
-const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < 0.35
+// 반듯한 격자 도시는 골목도 촘촘하게 살림
+const alleyKeep = () => (layoutStyle?.gridStraight ? 0.62 : 0.35)
+const segExistsX = (k, bz, seed) => hash(k * 5 + 1 + seed, bz * 11 + 3 - seed) < alleyKeep()
+const segExistsZ = (bx, k, seed) => hash(bx * 7 + 5 + seed, k * 19 - 2 - seed) < alleyKeep()
 
 // 이 논리 좌표가 도로면 'major'/'minor', 아니면 null
 export const roadAt = (lx, lz, seed = 0) => {
@@ -265,6 +278,8 @@ export const groundKind = (x, z, seed = 0, style = null) => {
     if (isMajorZ(kz, seed) && lz - linePosZ(kz, seed) < MAJOR_W) return 'road'
     return 'park'
   }
+  // 직사각 대공원 안엔 도로가 안 지나감
+  if (inParkRect(lx, lz)) return 'park'
   const road = roadAt(lx, lz, seed)
   if (road === 'major') return 'road'
   // 골목은 주변 부지색에 섞이는 은은한 길 (경계선처럼 안 보이게)

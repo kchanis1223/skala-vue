@@ -12,6 +12,7 @@ import {
   mountainLevel,
   riverCenterX,
   riverHalf,
+  inParkRect,
   RIVER_PARK,
 } from './cityLayout'
 
@@ -83,7 +84,7 @@ export class CarField {
       const lx = car.axis === 'x' ? car.pos : car.line + laneOffset
       const lz = car.axis === 'x' ? car.line - laneOffset : car.pos
 
-      if (inSea(lx, lz, this.seed, this.style)) {
+      if (inSea(lx, lz, this.seed, this.style) || inParkRect(lx, lz)) {
         car.needsSpawn = true
         continue
       }

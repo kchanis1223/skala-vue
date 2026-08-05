@@ -24,6 +24,7 @@ import {
   blockCenterZ,
   mountainLevel,
   hillLevel,
+  inParkRect,
   RIVER_PARK,
 } from './cityLayout'
 
@@ -576,6 +577,7 @@ export class CityField {
     // 중앙선 점선은 넓은 대로에만. 워프 적용해서 도로랑 같이 휘어짐. 다리 위는 상판 높이로
     const putDash = (dlx, dlz, rotY) => {
       if (inSea(dlx, dlz, seed, style)) return
+      if (inParkRect(dlx, dlz)) return // 대공원 안도 도로 없음
       const dw = worldFromLogical(dlx, dlz, seed)
       if (mountainLevel(dw.x, dw.z) > 0.24) return // 산엔 도로가 없음
       const onBridge = style.river && inRiver(dlx, dlz, seed)
@@ -587,6 +589,7 @@ export class CityField {
     const putLamp = (llx, llz) => {
       if (n.la >= MAX_LAMPS) return
       if (inSea(llx, llz, seed, style)) return
+      if (inParkRect(llx, llz)) return
       if (style.river && Math.abs(llx - riverCenterX(llz, seed)) < riverHalf() + RIVER_PARK) return
       const lw = worldFromLogical(llx, llz, seed)
       if (mountainLevel(lw.x, lw.z) > 0.24) return

@@ -71,7 +71,20 @@ const STYLES = {
       return hillLevel(w.x, w.z) > 0.15 ? 0 : 0.3
     },
   },
-  city_03: { heightScale: 1.3, glassRatio: 0.55, lowriseRatio: 0.12, parkProb: 0.1, river: true }, // 뉴욕
+  // 뉴욕: 자로 잰 격자 + 마천루 협곡 + 서쪽에 직사각 대공원(센트럴파크) + 엠파이어풍 첨탑
+  city_03: {
+    river: true,
+    heightScale: 1.35,
+    glassRatio: 0.6,
+    lowriseRatio: 0.06,
+    parkProb: 0.05,
+    plazaProb: 0.05,
+    gridStraight: true,
+    parkRect: { x0: -300, x1: -140, z0: -260, z1: 80 },
+    landmark: { type: 'empire', x: -100, z: -80 },
+    // 전역이 다운타운. 노이즈는 높이 변주만 줌
+    districtFn: (lx, lz, seed, base) => 0.5 + base * 0.5,
+  },
   city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA
   city_05: { heightScale: 0.9, glassRatio: 0.18, tints: COLD_TINTS }, // 모스크바
   city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22, coast: true }, // 리우
