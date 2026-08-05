@@ -1,1 +1,0 @@
-import{_t as e,l as t}from"./runtime-core.esm-bundler-M0I8n9P3.js";import{a as n}from"./index-B55PS80A.js";var r=r=>{let i=n();return{displayTemp:t(()=>{let t=e(r);return t==null?null:i.unit===`fahrenheit`?Math.round(t*9/5+32):t})}};export{r as t};
