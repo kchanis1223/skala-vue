@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
+import { useClock } from '@/composables/useClock'
 import { THEMES, conditionToTheme } from '@/utils/weatherTheme'
 
 const props = defineProps({
@@ -15,6 +16,21 @@ const { displayTemp } = useDisplayTemp(() => props.cityItem.temp)
 const { displayTemp: displayFeels } = useDisplayTemp(() => props.cityItem.feelsLike)
 
 const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condition)].emoji)
+
+// 도시 현지 시각. api의 timezone(UTC 오프셋 초)을 더해서 UTC 기준으로 찍으면 됨
+const now = useClock()
+const localTime = computed(() => {
+  if (props.cityItem.timezone == null) return null
+  const d = new Date(now.value + props.cityItem.timezone * 1000)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+})
+
+const isNight = computed(() => {
+  const { sunrise, sunset } = props.cityItem
+  if (!sunrise || !sunset) return false
+  const t = now.value / 1000
+  return t < sunrise || t > sunset
+})
 </script>
 
 <template>
@@ -22,6 +38,7 @@ const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condi
     <div class="card-head">
       <h3 class="city-name">{{ cityItem.flag }} {{ cityItem.name }}</h3>
       <div class="head-right">
+        <span v-if="localTime" class="local-time">{{ isNight ? '🌙' : '🕓' }} {{ localTime }}</span>
         <el-tag size="small" effect="plain">{{ cityItem.status }}</el-tag>
         <!-- 직접 추가한 도시만 지울 수 있음 -->
         <button
@@ -87,6 +104,12 @@ const weatherEmoji = computed(() => THEMES[conditionToTheme(props.cityItem.condi
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.local-time {
+  font-size: 0.74rem;
+  color: #909399;
+  white-space: nowrap;
 }
 
 .remove-btn {

@@ -40,6 +40,8 @@ const toCityWeather = (city, data) => ({
   snow1h: data.snow?.['1h'] ?? 0,
   sunrise: data.sys?.sunrise,
   sunset: data.sys?.sunset,
+  // UTC 기준 초 단위 오프셋. 도시 현지 시각 계산용
+  timezone: data.timezone,
 })
 
 export const useWeatherApi = () => {

@@ -3,9 +3,21 @@ import { computed } from 'vue'
 
 const props = defineProps({
   themeKey: { type: String, default: 'default' },
+  night: { type: Boolean, default: false },
 })
 
 const range = (n) => Array.from({ length: n }, (_, i) => i)
+
+// 밤하늘 별. 위쪽에 몰아서 뿌림
+const stars = computed(() => {
+  if (!props.night) return []
+  return range(40).map(() => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 55}%`,
+    animationDelay: `${Math.random() * 4}s`,
+    opacity: 0.3 + Math.random() * 0.7,
+  }))
+})
 
 // 파티클 위치/속도는 테마 바뀔 때마다 랜덤으로 뿌림
 const particles = computed(() => {
@@ -53,8 +65,19 @@ const particleClass = computed(
 
 <template>
   <Transition name="theme-fade">
-    <div :key="themeKey" class="theme-bg" :class="`bg-${themeKey}`">
-      <div v-if="themeKey === 'clear'" class="sun"></div>
+    <div
+      :key="`${themeKey}${night ? '-night' : ''}`"
+      class="theme-bg"
+      :class="[`bg-${themeKey}`, { night }]"
+    >
+      <span
+        v-for="(style, i) in stars"
+        :key="`star-${i}`"
+        class="star"
+        :style="style"
+      ></span>
+      <div v-if="themeKey === 'clear' && !night" class="sun"></div>
+      <div v-if="themeKey === 'clear' && night" class="moon"></div>
       <span
         v-for="(style, i) in particles"
         :key="`${themeKey}-${i}`"
@@ -108,6 +131,27 @@ const particleClass = computed(
   background: linear-gradient(180deg, #b9c2c8 0%, #d5dade 60%, #e8eaed 100%);
 }
 
+/* 밤 버전: 같은 날씨를 어두운 톤으로 */
+.bg-clear.night {
+  background: linear-gradient(180deg, #0d1b3e 0%, #1b3358 55%, #34517a 100%);
+}
+
+.bg-clouds.night {
+  background: linear-gradient(180deg, #232c36 0%, #38434f 60%, #4d5a66 100%);
+}
+
+.bg-rain.night {
+  background: linear-gradient(180deg, #1a232e 0%, #2c3a46 60%, #40505c 100%);
+}
+
+.bg-snow.night {
+  background: linear-gradient(180deg, #26303f 0%, #3c4a5c 60%, #5a6c80 100%);
+}
+
+.bg-mist.night {
+  background: linear-gradient(180deg, #272c31 0%, #3d444a 60%, #545c63 100%);
+}
+
 .particle {
   position: absolute;
   display: block;
@@ -139,6 +183,50 @@ const particleClass = computed(
   }
   50% {
     transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+/* 맑은 밤: 달 */
+.moon {
+  position: absolute;
+  top: 60px;
+  right: 110px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #fdf8e3 0%, #efe6c0 55%, #d8cea6 100%);
+  box-shadow: 0 0 70px 24px rgba(253, 248, 227, 0.28);
+}
+
+/* 크레이터 느낌 */
+.moon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 55%, rgba(0, 0, 0, 0.08) 0 11%, transparent 12%),
+    radial-gradient(circle at 62% 30%, rgba(0, 0, 0, 0.07) 0 8%, transparent 9%),
+    radial-gradient(circle at 68% 68%, rgba(0, 0, 0, 0.06) 0 14%, transparent 15%);
+}
+
+.star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  animation: twinkle 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
     opacity: 1;
   }
 }
@@ -204,6 +292,19 @@ const particleClass = computed(
   height: 60px;
   background: rgba(255, 255, 255, 0.65);
   filter: blur(26px);
+}
+
+/* 밤엔 구름/안개/빗줄기를 어둡거나 흐리게 눌러줌 */
+.night .cloud {
+  background: rgba(20, 26, 34, 0.45);
+}
+
+.night .fog {
+  background: rgba(180, 190, 200, 0.18);
+}
+
+.night .drop {
+  background: linear-gradient(180deg, transparent, rgba(190, 210, 230, 0.4));
 }
 
 @keyframes drift {

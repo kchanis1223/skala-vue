@@ -10,7 +10,7 @@ import { THEMES } from '@/utils/weatherTheme'
 
 const flightStore = useFlightStore()
 // 스토어 구조분해는 storeToRefs로 해야 반응성이 안 깨짐
-const { selectedCity, themeKey } = storeToRefs(flightStore)
+const { selectedCity, previewTheme, themeKey, isNight } = storeToRefs(flightStore)
 
 // 도쿄"이" 처럼 어색해져서 받침 보고 이/가 붙임
 const nameParticle = computed(() => {
@@ -19,10 +19,25 @@ const nameParticle = computed(() => {
   if (lastCode < 0xac00 || lastCode > 0xd7a3) return '이(가)'
   return (lastCode - 0xac00) % 28 > 0 ? '이' : '가'
 })
+
+// "맑음으로" / "비로" 같은 (으)로 받침 처리
+const themeParticle = computed(() => {
+  const label = THEMES[previewTheme.value]?.label ?? ''
+  const lastCode = label.charCodeAt(label.length - 1)
+  if (lastCode < 0xac00 || lastCode > 0xd7a3) return '(으)로'
+  const jong = (lastCode - 0xac00) % 28
+  return jong === 0 || jong === 8 ? '로' : '으로' // 받침 없거나 ㄹ이면 '로'
+})
+
+// 밤엔 맑음 이모지를 달로
+const chipEmoji = computed(() => {
+  if (isNight.value && themeKey.value === 'clear') return '🌙'
+  return THEMES[themeKey.value].emoji
+})
 </script>
 
 <template>
-  <WeatherThemeBackground :theme-key="themeKey" />
+  <WeatherThemeBackground :theme-key="themeKey" :night="isNight" />
   <ThemePreviewDock />
 
   <header class="app-header">
@@ -39,10 +54,28 @@ const nameParticle = computed(() => {
     <UnitToggler class="unit-toggler" />
   </header>
 
-  <!-- 도시를 선택하면 우상단에 뜨고 배경 테마도 같이 바뀜 -->
+  <!-- 도시를 선택하면 우상단에 뜨고 배경 테마도 같이 바뀜.
+       테마 미리보기를 직접 누른 경우엔 도시 문구랑 헷갈려서 따로 안내 -->
   <Transition name="chip-pop">
-    <div v-if="selectedCity" :key="selectedCity.id" class="theme-chip" :class="`chip-${themeKey}`">
-      <span class="chip-emoji">{{ THEMES[themeKey].emoji }}</span>
+    <div
+      v-if="previewTheme"
+      :key="`preview-${previewTheme}`"
+      class="theme-chip"
+      :class="`chip-${themeKey}`"
+    >
+      <span class="chip-emoji">{{ chipEmoji }}</span>
+      <span>
+        배경 테마가 <strong>{{ THEMES[previewTheme].label }}</strong
+        >{{ themeParticle }} 변경되었습니다
+      </span>
+    </div>
+    <div
+      v-else-if="selectedCity"
+      :key="selectedCity.id"
+      class="theme-chip"
+      :class="`chip-${themeKey}`"
+    >
+      <span class="chip-emoji">{{ chipEmoji }}</span>
       <span>
         <strong>{{ selectedCity.name }}</strong
         >{{ nameParticle }} 선택되었습니다

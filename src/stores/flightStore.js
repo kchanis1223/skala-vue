@@ -12,6 +12,15 @@ export const useFlightStore = defineStore('flight', () => {
     () => previewTheme.value ?? conditionToTheme(selectedCity.value?.condition),
   )
 
+  // 선택 도시가 지금 밤이면 배경도 밤 버전으로. 미리보기 중엔 낮 버전 고정
+  const isNight = computed(() => {
+    if (previewTheme.value) return false
+    const city = selectedCity.value
+    if (!city?.sunrise || !city?.sunset) return false
+    const t = Date.now() / 1000
+    return t < city.sunrise || t > city.sunset
+  })
+
   const selectCity = (city) => {
     selectedCity.value = city
     previewTheme.value = null
@@ -32,6 +41,7 @@ export const useFlightStore = defineStore('flight', () => {
     selectedCity,
     previewTheme,
     themeKey,
+    isNight,
     selectCity,
     togglePreview,
     lastFlight,
