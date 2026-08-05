@@ -562,10 +562,10 @@ export class CityField {
         // 주택1 = 낮고 넓은 단층집(지붕이 큼) / 주택2 = 2~3층집(몸통 높고 굴뚝 있음)
         if (isLow && n.ho < MAX_HOUSES) {
           const twoStory = blockSeed(bx, bz, seed, 12) < 0.5
-          const hw2 = twoStory ? w * 0.72 : w
-          const hd2 = twoStory ? d * 0.72 : d
-          const bodyH = twoStory ? 8 + r1 * 4.5 : 4.2 + r1 * 1.6
-          const roofH = Math.min(hw2, hd2) * (twoStory ? 0.32 : 0.52)
+          const hw2 = twoStory ? w * 0.6 : w
+          const hd2 = twoStory ? d * 0.6 : d
+          const bodyH = twoStory ? 10 + r1 * 4 : 3.8 + r1 * 1.4
+          const roofH = Math.min(hw2, hd2) * (twoStory ? 0.3 : 0.55)
           const hBurial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
           this.place(
             entry.houses,
@@ -599,18 +599,18 @@ export class CityField {
             n.ho,
             this.vary(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)], r2, r4),
           )
-          // 2~3층집은 지붕 굴뚝으로 실루엣을 다르게
+          // 2~3층집은 지붕 위로 확실히 솟은 굴뚝으로 실루엣을 다르게
           if (twoStory && n.ch < MAX_HOUSES) {
             const ridgeOff = (r3 - 0.5) * (alongZ ? hd2 : hw2) * 0.5
             this.place(
               entry.chimneys,
               n.ch++,
               bwx + (alongZ ? 0 : ridgeOff),
-              bGround + bodyH + roofH * 0.75,
+              bGround + bodyH + roofH + 1.1,
               bwz + (alongZ ? ridgeOff : 0),
-              1.1,
-              2.6,
-              1.1,
+              1.3,
+              3.4,
+              1.3,
             )
           }
           n.ho++
