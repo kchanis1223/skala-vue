@@ -174,31 +174,33 @@ export class GliderEngine {
     this.glider = buildGlider()
     this.scene.add(this.glider)
 
-    // 비행 경계를 알려주는 은은한 빛의 벽 4면
+    // 비행 경계를 알려주는 빛의 벽 4면. 평소엔 은은하다가 다가가면 그 벽만 밝아짐
     const wallGeo = new THREE.PlaneGeometry(MAP_BOUND * 2, 320)
-    const wallMat = new THREE.MeshBasicMaterial({
-      color: '#7fd8ff',
-      transparent: true,
-      opacity: 0.06,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    })
     this.walls = new THREE.Group()
+    this.wallList = []
+    // [x, z, 회전, 거리 계산 함수]
     const wallDefs = [
-      [0, -MAP_BOUND, 0],
-      [0, MAP_BOUND, 0],
-      [-MAP_BOUND, 0, Math.PI / 2],
-      [MAP_BOUND, 0, Math.PI / 2],
+      [0, -MAP_BOUND, 0, (p) => p.z + MAP_BOUND],
+      [0, MAP_BOUND, 0, (p) => MAP_BOUND - p.z],
+      [-MAP_BOUND, 0, Math.PI / 2, (p) => p.x + MAP_BOUND],
+      [MAP_BOUND, 0, Math.PI / 2, (p) => MAP_BOUND - p.x],
     ]
-    for (const [wx, wz, rot] of wallDefs) {
-      const wall = new THREE.Mesh(wallGeo, wallMat)
+    for (const [wx, wz, rot, distFn] of wallDefs) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: '#7fd8ff',
+        transparent: true,
+        opacity: 0.06,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+      const wall = new THREE.Mesh(wallGeo, mat)
       wall.position.set(wx, 140, wz)
       wall.rotation.y = rot
       this.walls.add(wall)
+      this.wallList.push({ mat, distFn })
     }
     this.scene.add(this.walls)
     this.wallGeo = wallGeo
-    this.wallMat = wallMat
 
     this.clock = new THREE.Clock()
     this.resize = this.resize.bind(this)
@@ -269,10 +271,21 @@ export class GliderEngine {
       this.onHit?.()
     }
 
+    // 경계 벽: 200m 안으로 들어오면 그쪽 벽이 점점 밝아지고, 코앞이면 깜빡이며 경고
+    for (const w of this.wallList) {
+      const d = w.distFn(s.pos)
+      const near = THREE.MathUtils.clamp((200 - d) / 200, 0, 1)
+      let op = 0.06 + near * near * 0.3
+      if (d < 70) op += (0.5 + 0.5 * Math.sin(s.time * 7)) * 0.12
+      w.mat.opacity = op
+    }
+
     // 기체 위치/자세 반영. 측풍 세기만큼 살짝 떠오르는 부유감 추가
     const lift =
       Math.min(Math.abs(s.crosswind ?? 0) * 0.1, 0.9) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
     this.glider.position.set(s.pos.x, s.pos.y + lift, s.pos.z)
+    // 부스트 순간 기체가 살짝 부풀었다 돌아옴
+    this.glider.scale.setScalar(1 + this.boostFx * 0.2)
     // 순풍이면 기수가 살짝 들리고 역풍이면 눌림
     const windPitch = THREE.MathUtils.clamp((s.alongWind ?? 0) * 0.012, -0.1, 0.1)
     this.glider.rotation.set(s.pitch + windPitch, s.yaw, s.roll)
@@ -282,11 +295,18 @@ export class GliderEngine {
     const fz = -Math.cos(s.yaw)
     const camTarget = new THREE.Vector3(s.pos.x - fx * 8, s.pos.y + 2.6, s.pos.z - fz * 8)
     this.camera.position.lerp(camTarget, Math.min(dt * 4.5, 1))
+    // 부스트 중엔 카메라가 미세하게 떨려서 가속감이 몸으로 옴
+    if (this.boostFx > 0.02) {
+      const shake = this.boostFx * 0.35
+      this.camera.position.x += Math.sin(s.time * 51) * shake
+      this.camera.position.y += Math.cos(s.time * 47) * shake * 0.6
+    }
     this.camera.lookAt(s.pos.x + fx * 10, s.pos.y, s.pos.z + fz * 10)
 
     // 속도 붙으면 화각이 넓어지면서 빨라지는 느낌 남. 크리스탈 부스트 순간엔 화각을 확 밀어줌
-    const targetFov = 66 + THREE.MathUtils.clamp((s.speed - 8) / 20, 0, 1) * 12 + this.boostFx * 7
-    this.camera.fov += (targetFov - this.camera.fov) * Math.min(dt * 3, 1)
+    const targetFov = 66 + THREE.MathUtils.clamp((s.speed - 8) / 20, 0, 1) * 12 + this.boostFx * 13
+    // 부스트 순간엔 화각이 즉각 튀고, 평소엔 천천히 따라옴
+    this.camera.fov += (targetFov - this.camera.fov) * Math.min(dt * (3 + this.boostFx * 9), 1)
     this.camera.updateProjectionMatrix()
 
     this.terrain.update(s.pos.x, s.pos.z)
@@ -384,7 +404,7 @@ export class GliderEngine {
     this.crystalField.dispose()
     this.scene.remove(this.walls)
     this.wallGeo.dispose()
-    this.wallMat.dispose()
+    for (const w of this.wallList) w.mat.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
       obj.material?.map?.dispose()
