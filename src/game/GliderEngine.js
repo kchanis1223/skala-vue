@@ -12,28 +12,98 @@ import { CrystalField } from './world/crystals'
 import { Landmarks } from './world/landmarks'
 import { ObstacleField } from './world/obstacles'
 
-// 종이비행기 모양을 삼각형 몇 개로 직접 만듦. 날개폭 3.3m쯤 되는 진짜 종이비행기 스케일
+// 날개 윗면에 입힐 종이 텍스처. 접음선 자국 + SKALA 레터링
+// (추적 카메라가 뒤에서 보니까 글자는 180도 돌려 그려야 바로 읽힘)
+const makeWingTexture = () => {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const g = canvas.getContext('2d')
+  g.fillStyle = '#f6f5f0'
+  g.fillRect(0, 0, 512, 512)
+  // 접음선 자국 (가운데 + 패널 접힘)
+  g.strokeStyle = 'rgba(150, 148, 138, 0.5)'
+  g.lineWidth = 3
+  g.beginPath()
+  g.moveTo(256, 0)
+  g.lineTo(256, 512)
+  g.stroke()
+  g.lineWidth = 2
+  for (const px of [145, 367]) {
+    g.beginPath()
+    g.moveTo(px + (px < 256 ? 40 : -40), 512)
+    g.lineTo(px, 0)
+    g.stroke()
+  }
+  g.save()
+  g.translate(256, 88)
+  g.rotate(Math.PI)
+  g.fillStyle = '#2b4a7a'
+  g.font = '900 88px Pretendard, Arial, sans-serif'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText('SKALA', 0, 0)
+  g.restore()
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.anisotropy = 4
+  return tex
+}
+
+// 종이비행기. 날개폭 3.4m쯤 되는 진짜 종이비행기 스케일
+// 날개를 패널 2장으로 나누고 각도를 살짝 다르게 줘서 flatShading으로 접음선이 드러남
 const buildGlider = () => {
-  const geo = new THREE.BufferGeometry()
-  // 기수 / 좌우 날개끝 / 꼬리 접힘부
-  const v = new Float32Array([
-    // 왼쪽 날개
-    0, 0, -1.8, -1.66, 0.29, 1.08, 0, 0.11, 0.86,
-    // 오른쪽 날개
-    0, 0, -1.8, 0, 0.11, 0.86, 1.66, 0.29, 1.08,
-    // 아래 접힌 몸통
-    0, 0, -1.8, 0, -0.4, 1.08, 0, 0.11, 0.86,
-  ])
-  geo.setAttribute('position', new THREE.BufferAttribute(v, 3))
-  geo.computeVertexNormals()
-  const mat = new THREE.MeshLambertMaterial({
-    color: '#f5f5f5',
+  // 주요 접점들: 기수 N / 중심 뒤 C / 패널 접힘 M / 날개끝 T / 윙렛 끝 W / 윙렛 앞점 T2
+  const N = [0, 0.12, -1.8]
+  const C = [0, 0.2, 0.86]
+  const pts = (s) => ({
+    M: [s * 0.75, 0.3, 1.0],
+    T: [s * 1.55, 0.42, 1.08],
+    W: [s * 1.68, 0.82, 1.02],
+    T2: [s * 1.28, 0.38, 0.58],
+  })
+
+  const positions = []
+  const uvs = []
+  const tri = (a, b, c) => {
+    for (const p of [a, b, c]) {
+      positions.push(p[0], p[1], p[2])
+      // 위에서 내려본 투영으로 텍스처 좌표를 만듦
+      uvs.push((p[0] + 1.72) / 3.44, (p[2] + 1.8) / 2.9)
+    }
+  }
+  for (const s of [-1, 1]) {
+    const { M, T, W, T2 } = pts(s)
+    tri(N, M, C) // 안쪽 패널
+    tri(N, T, M) // 바깥 패널
+    tri(T2, W, T) // 윙렛 (끝이 위로 접힘)
+  }
+  const wingGeo = new THREE.BufferGeometry()
+  wingGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
+  wingGeo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
+  wingGeo.computeVertexNormals()
+  const wingTex = makeWingTexture()
+  const wingMat = new THREE.MeshLambertMaterial({
+    map: wingTex,
     side: THREE.DoubleSide,
     flatShading: true,
   })
-  const mesh = new THREE.Mesh(geo, mat)
+
+  // 몸통 킬 (아래로 접힌 부분). 좌우로 살짝 벌어진 두 장
+  const keelPos = []
+  for (const s of [-1, 1]) {
+    keelPos.push(0, 0.1, -1.8, s * 0.06, -0.46, 1.0, 0, 0.16, 0.86)
+  }
+  const keelGeo = new THREE.BufferGeometry()
+  keelGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(keelPos), 3))
+  keelGeo.computeVertexNormals()
+  const keelMat = new THREE.MeshLambertMaterial({
+    color: '#dedcd4',
+    side: THREE.DoubleSide,
+    flatShading: true,
+  })
+
   const group = new THREE.Group()
-  group.add(mesh)
+  group.add(new THREE.Mesh(wingGeo, wingMat), new THREE.Mesh(keelGeo, keelMat))
   group.rotation.order = 'YXZ'
   return group
 }
@@ -308,6 +378,7 @@ export class GliderEngine {
     this.wallMat.dispose()
     this.glider.traverse((obj) => {
       obj.geometry?.dispose()
+      obj.material?.map?.dispose()
       obj.material?.dispose()
     })
     this.renderer.dispose()
