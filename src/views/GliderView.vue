@@ -3,8 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCityStore } from '@/stores/cityStore'
 import { useFlightStore } from '@/stores/flightStore'
+import { ElMessage } from 'element-plus'
 import { useWeatherApi } from '@/composables/useWeatherApi'
 import { useFlightDb } from '@/composables/useFlightDb'
+import { useLeaderboardApi } from '@/composables/useLeaderboardApi'
 import { toFlightParams } from '@/game/weatherMapping'
 import GliderCanvas from '@/components/glider/GliderCanvas.vue'
 import CompassBar from '@/components/glider/CompassBar.vue'
@@ -17,6 +19,7 @@ const router = useRouter()
 const cityStore = useCityStore()
 const flightStore = useFlightStore()
 const flightDb = useFlightDb()
+const boardApi = useLeaderboardApi()
 const { isLoading, fetchCityDetail } = useWeatherApi()
 
 // select(도시 고르기) → briefing(브리핑) → flying(비행) → ended(결과)
@@ -96,24 +99,31 @@ const onEnd = (r) => {
 }
 
 // 결과창에서 닉네임 쓰고 등록을 눌러야 리더보드에 저장됨
+// 내 기록(sql.js)이랑 전역 서버 둘 다 보내는데, 서버가 죽어있어도 내 기록은 남김
 const onRegister = async (pilot) => {
   const r = result.value
+  const flight = {
+    pilot,
+    cityId: city.value.id,
+    cityName: city.value.name,
+    score: r.stars,
+    distance: r.distance,
+    duration: r.duration,
+    crashed: r.crashed,
+    condition: city.value.condition,
+    windSpeed: city.value.windSpeed,
+    temp: city.value.temp,
+  }
   registering.value = true
   try {
-    await flightDb.addFlight({
-      pilot,
-      cityId: city.value.id,
-      cityName: city.value.name,
-      score: r.stars,
-      distance: r.distance,
-      duration: r.duration,
-      crashed: r.crashed,
-      condition: city.value.condition,
-      windSpeed: city.value.windSpeed,
-      temp: city.value.temp,
-      flownAt: Date.now(),
-    })
+    const [, serverOk] = await Promise.all([
+      flightDb.addFlight({ ...flight, flownAt: Date.now() }),
+      boardApi.postFlight(flight),
+    ])
     registered.value = true
+    if (boardApi.enabled && !serverOk) {
+      ElMessage.warning('전역 랭킹 서버에 연결하지 못해서 내 기록에만 저장했어요')
+    }
   } finally {
     registering.value = false
   }

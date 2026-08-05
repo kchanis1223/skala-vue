@@ -6,6 +6,7 @@ import { useConfigStore } from '@/stores/configStore'
 import { useDisplayTemp } from '@/composables/useDisplayTemp'
 import { useWeatherApi } from '@/composables/useWeatherApi'
 import { useFlightDb } from '@/composables/useFlightDb'
+import { useLeaderboardApi } from '@/composables/useLeaderboardApi'
 import { useFlightStore } from '@/stores/flightStore'
 
 const route = useRoute()
@@ -20,6 +21,23 @@ const cityInfo = ref(null)
 const notFound = ref(false)
 const leaderboard = ref([])
 const cityStats = ref(null)
+// 'global'이면 서버에서 받아온 전역 랭킹, 'local'이면 이 브라우저 기록
+const boardSource = ref('local')
+
+const boardApi = useLeaderboardApi()
+
+// 전역 리더보드 먼저 시도하고 안 되면 내 기록으로 폴백
+const loadBoard = async (cityId) => {
+  const global = await boardApi.fetchLeaderboard(cityId)
+  if (global) {
+    boardSource.value = 'global'
+    leaderboard.value = global
+    return
+  }
+  boardSource.value = 'local'
+  leaderboard.value = await flightDb.getLeaderboard(cityId)
+  cityStats.value = await flightDb.getCityStats(cityId)
+}
 
 // 마운트될 때 url의 cityId로 도시 찾고 실제 날씨 + 미세먼지 + 리더보드 가져옴
 onMounted(async () => {
@@ -30,8 +48,7 @@ onMounted(async () => {
   }
   cityInfo.value = baseCity
   // 리더보드는 날씨 로딩이랑 상관없이 바로 불러옴
-  flightDb.getLeaderboard(baseCity.id).then((list) => (leaderboard.value = list))
-  flightDb.getCityStats(baseCity.id).then((stats) => (cityStats.value = stats))
+  loadBoard(baseCity.id)
   cityInfo.value = await fetchCityDetail(baseCity)
   // 상세 페이지 들어와도 배경 테마 맞춰줌
   flightStore.selectCity(cityInfo.value)
@@ -108,8 +125,11 @@ const goGlider = () => {
         <template #header>
           <div class="detail-head">
             <h2 class="detail-title">🏆 {{ cityInfo.name }} 리더보드</h2>
-            <span v-if="cityStats?.plays" class="board-stats">
-              {{ cityStats.plays }}회 비행 · 평균 💎{{ cityStats.avg }}
+            <el-tag v-if="boardSource === 'global'" size="small" type="success" effect="plain">
+              🌍 전역
+            </el-tag>
+            <span v-else-if="cityStats?.plays" class="board-stats">
+              내 기록 {{ cityStats.plays }}회 · 평균 💎{{ cityStats.avg }}
             </span>
           </div>
         </template>
