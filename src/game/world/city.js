@@ -192,6 +192,7 @@ export class CityField {
     this.roofGeo = makeRoofGeo()
     // 손으로 짠 프리즘이라 면 방향이 뒤집힌 데가 있어서 양면 렌더로 해결
     this.roofMat = new THREE.MeshLambertMaterial({ flatShading: true, side: THREE.DoubleSide })
+    this.chimneyMat = new THREE.MeshLambertMaterial({ color: '#8a5a4a', flatShading: true })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -236,6 +237,7 @@ export class CityField {
       containers: make(this.containerGeo, this.containerMat, MAX_CONTAINERS),
       houses: make(this.buildingGeo, this.houseWallMat, MAX_HOUSES),
       roofs: make(this.roofGeo, this.roofMat, MAX_HOUSES),
+      chimneys: make(this.buildingGeo, this.chimneyMat, MAX_HOUSES),
       boxes: [],
     }
   }
@@ -250,14 +252,19 @@ export class CityField {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
 
-  // 같은 팔레트 색이라도 건물마다 색조/채도/명도를 흔들어서 단조롭지 않게
+  // 주택용 과감한 변주 (원색끼리도 톤이 갈리게)
   vary(hex, a, b) {
     return this.color.set(hex).offsetHSL((a - 0.5) * 0.07, (b - 0.5) * 0.2, (a + b - 1) * 0.12)
   }
 
-  // 셋에 하나쯤은 도시 팔레트 대신 원색 계열을 입혀서 거리가 알록달록해짐
+  // 빌딩용 미세 변주. 색 자체가 바뀌면 어색해서 톤만 살짝
+  varySoft(hex, a, b) {
+    return this.color.set(hex).offsetHSL((a - 0.5) * 0.025, (b - 0.5) * 0.07, (a + b - 1) * 0.05)
+  }
+
+  // 주택 벽은 절반쯤 원색을 입어서 주택가가 알록달록함
   pickWall(style, accentR, paletteR) {
-    if (accentR < 0.36) return ACCENT_COLORS[Math.floor(paletteR * ACCENT_COLORS.length)]
+    if (accentR < 0.5) return ACCENT_COLORS[Math.floor(paletteR * ACCENT_COLORS.length)]
     return style.tints[Math.floor(paletteR * style.tints.length)]
   }
 
@@ -292,6 +299,7 @@ export class CityField {
       la: 0,
       co: 0,
       ho: 0,
+      ch: 0,
     }
 
     const bx0 = lineIndexX(ox - half, seed)
@@ -550,9 +558,14 @@ export class CityField {
         const { x: bwx, z: bwz } = worldFromLogical(plan.cx, plan.cz, seed)
         const bGround = terrainHeight(bwx, bwz)
 
-        // 건물 4종 중 주택1: 저층의 절반은 박공지붕 단독주택
-        if (isLow && blockSeed(bx, bz, seed, 12) < 0.5 && n.ho < MAX_HOUSES) {
-          const bodyH = Math.max(h * 0.7, 5)
+        // 주택가: 저층 자리는 전부 박공집 2종 중 하나
+        // 주택1 = 낮고 넓은 단층집(지붕이 큼) / 주택2 = 2~3층집(몸통 높고 굴뚝 있음)
+        if (isLow && n.ho < MAX_HOUSES) {
+          const twoStory = blockSeed(bx, bz, seed, 12) < 0.5
+          const hw2 = twoStory ? w * 0.72 : w
+          const hd2 = twoStory ? d * 0.72 : d
+          const bodyH = twoStory ? 8 + r1 * 4.5 : 4.2 + r1 * 1.6
+          const roofH = Math.min(hw2, hd2) * (twoStory ? 0.32 : 0.52)
           const hBurial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
           this.place(
             entry.houses,
@@ -560,39 +573,52 @@ export class CityField {
             bwx,
             bGround + (bodyH - hBurial) / 2,
             bwz,
-            w,
+            hw2,
             bodyH + hBurial,
-            d,
+            hd2,
           )
           // 주택가는 절반쯤 원색이라 제일 알록달록함
           entry.houses.setColorAt(
             n.ho,
-            this.vary(this.pickWall(style, blockSeed(bx, bz, seed, 14) * 0.7, r2), r1, r3),
+            this.vary(this.pickWall(style, blockSeed(bx, bz, seed, 14), r2), r1, r3),
           )
           // 지붕 용마루는 긴 변 방향으로
-          const roofH = Math.min(w, d) * 0.4
-          const alongZ = d > w
+          const alongZ = hd2 > hw2
           this.place(
             entry.roofs,
             n.ho,
             bwx,
             bGround + bodyH,
             bwz,
-            (alongZ ? d : w) + 1.4,
+            (alongZ ? hd2 : hw2) + 1.4,
             roofH,
-            (alongZ ? w : d) + 1.4,
+            (alongZ ? hw2 : hd2) + 1.4,
             alongZ ? Math.PI / 2 : 0,
           )
           entry.roofs.setColorAt(
             n.ho,
             this.vary(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)], r2, r4),
           )
+          // 2~3층집은 지붕 굴뚝으로 실루엣을 다르게
+          if (twoStory && n.ch < MAX_HOUSES) {
+            const ridgeOff = (r3 - 0.5) * (alongZ ? hd2 : hw2) * 0.5
+            this.place(
+              entry.chimneys,
+              n.ch++,
+              bwx + (alongZ ? 0 : ridgeOff),
+              bGround + bodyH + roofH * 0.75,
+              bwz + (alongZ ? ridgeOff : 0),
+              1.1,
+              2.6,
+              1.1,
+            )
+          }
           n.ho++
           entry.boxes.push({
             x: bwx,
             z: bwz,
-            hw: w / 2,
-            hd: d / 2,
+            hw: hw2 / 2,
+            hd: hd2 / 2,
             top: bGround + bodyH + roofH * 0.5,
           })
           continue
@@ -624,12 +650,7 @@ export class CityField {
             tierH,
             d * 0.68,
           )
-          const tint = this.vary(
-            isGlass ? style.tints[Math.floor(r2 * style.tints.length)]
-              : this.pickWall(style, blockSeed(bx, bz, seed, 14), r2),
-            r1,
-            r3,
-          )
+          const tint = this.varySoft(style.tints[Math.floor(r2 * style.tints.length)], r1, r3)
           targetMesh.setColorAt(idx, tint)
           targetMesh.setColorAt(idx + 1, tint)
           if (isGlass) n.g += 2
@@ -638,13 +659,7 @@ export class CityField {
           this.place(targetMesh, idx, bwx, bGround + (h - burial) / 2, bwz, w, h + burial, d)
           targetMesh.setColorAt(
             idx,
-            this.vary(
-              isGlass
-                ? style.tints[Math.floor(r2 * style.tints.length)]
-                : this.pickWall(style, blockSeed(bx, bz, seed, 14), r2),
-              r1,
-              r3,
-            ),
+            this.varySoft(style.tints[Math.floor(r2 * style.tints.length)], r1, r3),
           )
           if (isGlass) n.g++
           else n.b++
@@ -802,6 +817,7 @@ export class CityField {
     this.hideRest(entry.containers, n.co, MAX_CONTAINERS)
     this.hideRest(entry.houses, n.ho, MAX_HOUSES)
     this.hideRest(entry.roofs, n.ho, MAX_HOUSES)
+    this.hideRest(entry.chimneys, n.ch, MAX_HOUSES)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -926,5 +942,6 @@ export class CityField {
     this.houseWallMat.dispose()
     this.roofGeo.dispose()
     this.roofMat.dispose()
+    this.chimneyMat.dispose()
   }
 }
