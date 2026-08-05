@@ -16,6 +16,7 @@ export class Landmarks {
     if (spec?.type === 'empire') this.buildEmpire(spec, isNight)
     if (spec?.type === 'burj') this.buildBurj(spec, isNight)
     if (spec?.type === 'eiffel') this.buildEiffel(spec, isNight)
+    if (spec?.type === 'stalin') for (const t of spec.towers) this.buildStalin(t, isNight)
 
     scene.add(this.group)
   }
@@ -255,6 +256,33 @@ export class Landmarks {
       { x: spec.x, z: spec.z, hw: 11, hd: 11, top: ground + legH + 2, bottom: ground + legH - 2 },
       { x: spec.x, z: spec.z, hw: 4.5, hd: 4.5, top: ground + legH + 66, bottom: ground + legH },
     )
+  }
+
+  // 스탈린 양식 첨탑 빌딩 (웨딩케이크식 3단 + 금색 첨탑)
+  buildStalin(spec, isNight) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const stone = this.mat('#b8aa96')
+    const tiers = [
+      { w: 40, h: 42 },
+      { w: 26, h: 34 },
+      { w: 14, h: 28 },
+    ]
+    let y = ground
+    for (const t of tiers) {
+      const box = new THREE.Mesh(this.geo(new THREE.BoxGeometry(t.w, t.h, t.w)), stone)
+      box.position.set(spec.x, y + t.h / 2, spec.z)
+      g.add(box)
+      this.boxes.push({ x: spec.x, z: spec.z, hw: t.w / 2, hd: t.w / 2, top: y + t.h })
+      y += t.h
+    }
+    const spire = new THREE.Mesh(
+      this.geo(new THREE.CylinderGeometry(0.2, 2, 24, 6)),
+      this.mat('#d8b02f', { emissive: '#d8b02f', emissiveIntensity: isNight ? 0.7 : 0.25 }),
+    )
+    spire.position.set(spec.x, y + 12, spec.z)
+    g.add(spire)
+    this.boxes.push({ x: spec.x, z: spec.z, hw: 1.6, hd: 1.6, top: y + 24 })
   }
 
   collides(x, y, z) {

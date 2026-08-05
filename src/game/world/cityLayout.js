@@ -147,8 +147,10 @@ export const blockCenterX = (k, seed = 0) =>
 export const blockCenterZ = (k, seed = 0) =>
   (linePosZ(k, seed) + MAJOR_W + linePosZ(k + 1, seed)) / 2
 
-export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < 0.22
-export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < 0.22
+// 대로 빈도. 모스크바처럼 큰 대로가 많은 도시는 스타일에서 올림
+const majorProb = () => layoutStyle?.majorProb ?? 0.22
+export const isMajorX = (k, seed = 0) => hash(k * 13 + 7 + seed, 91 - seed) < majorProb()
+export const isMajorZ = (k, seed = 0) => hash(97 + seed, k * 17 + 3 - seed) < majorProb()
 
 // 반듯한 격자 도시는 골목도 촘촘하게 살림
 const alleyKeep = () => (layoutStyle?.gridStraight ? 0.62 : 0.35)

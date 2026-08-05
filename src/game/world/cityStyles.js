@@ -86,7 +86,24 @@ const STYLES = {
     districtFn: (lx, lz, seed, base) => 0.5 + base * 0.5,
   },
   city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA
-  city_05: { heightScale: 0.9, glassRatio: 0.18, tints: COLD_TINTS }, // 모스크바
+  // 모스크바: 날씨와 무관하게 늘 설원, 넓은 대로, 스탈린 양식 첨탑 3채가 삼각 배치
+  city_05: {
+    heightScale: 0.85,
+    glassRatio: 0.15,
+    lowriseRatio: 0.25,
+    tints: COLD_TINTS,
+    alwaysSnowy: true,
+    majorProb: 0.32,
+    landmark: {
+      type: 'stalin',
+      towers: [
+        { x: -220, z: -260 },
+        { x: 260, z: -60 },
+        { x: -60, z: 300 },
+      ],
+    },
+    districtFn: (lx, lz, seed, base) => 0.25 + base * 0.35,
+  },
   city_06: { heightScale: 0.7, lowriseRatio: 0.5, parkProb: 0.22, coast: true }, // 리우
   city_07: { glassRatio: 0.45, parkProb: 0.18, coast: true }, // 시드니
   // 두바이: 페르시아만 해안 + 모래 바닥, 중심부에만 초고층이 몰리고

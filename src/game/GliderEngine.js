@@ -63,14 +63,16 @@ export class GliderEngine {
     setTerrainStyle(params.style)
 
     this.sky = setupSky(this.scene, { theme: params.theme, isNight: params.isNight })
+    // 모스크바처럼 날씨와 무관하게 늘 눈 덮인 도시도 있음
+    const snowy = params.theme === 'snow' || !!params.style?.alwaysSnowy
     this.terrain = new TerrainManager(this.scene, {
-      snowy: params.theme === 'snow',
+      snowy,
       style: params.style,
       anisotropy: this.renderer.capabilities.getMaxAnisotropy(),
     })
     this.city = new CityField(this.scene, {
       style: params.style,
-      snowy: params.theme === 'snow',
+      snowy,
       isNight: params.isNight,
     })
     this.cars = new CarField(this.scene, params.style)
