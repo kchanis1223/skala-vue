@@ -176,7 +176,8 @@ export class CityField {
     // 주택은 창문 텍스처 대신 민무늬 벽 + 박공지붕
     this.houseWallMat = new THREE.MeshLambertMaterial({ flatShading: true })
     this.roofGeo = makeRoofGeo()
-    this.roofMat = new THREE.MeshLambertMaterial({ flatShading: true })
+    // 손으로 짠 프리즘이라 면 방향이 뒤집힌 데가 있어서 양면 렌더로 해결
+    this.roofMat = new THREE.MeshLambertMaterial({ flatShading: true, side: THREE.DoubleSide })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
