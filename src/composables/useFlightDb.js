@@ -7,6 +7,7 @@ const STORAGE_KEY = 'weather-glider:flight-db'
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS flights (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pilot TEXT,
     city_id TEXT NOT NULL,
     city_name TEXT NOT NULL,
     score INTEGER NOT NULL,
@@ -51,6 +52,10 @@ const openDb = async () => {
     db = new SQL.Database()
   }
   db.run(SCHEMA)
+  // 닉네임 기능 전에 만들어진 DB에는 pilot 컬럼이 없어서 여기서 추가해줌
+  const cols = db.exec(`PRAGMA table_info(flights)`)
+  const hasPilot = cols[0]?.values.some((row) => row[1] === 'pilot')
+  if (!hasPilot) db.run(`ALTER TABLE flights ADD COLUMN pilot TEXT`)
   return db
 }
 
@@ -77,9 +82,10 @@ export const useFlightDb = () => {
   const addFlight = async (flight) => {
     const db = await getDb()
     db.run(
-      `INSERT INTO flights (city_id, city_name, score, distance, duration, crashed, condition, wind_speed, temp, flown_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO flights (pilot, city_id, city_name, score, distance, duration, crashed, condition, wind_speed, temp, flown_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        flight.pilot ?? null,
         flight.cityId,
         flight.cityName,
         flight.score,
@@ -100,10 +106,21 @@ export const useFlightDb = () => {
     const db = await getDb()
     return rows(
       db,
-      `SELECT score, distance, duration, crashed, condition, flown_at
+      `SELECT pilot, score, distance, duration, crashed, condition, flown_at
        FROM flights WHERE city_id = ?
        ORDER BY score DESC, distance DESC LIMIT ?`,
       [cityId, limit],
+    )
+  }
+
+  // 기록실 "나의 비행 이력"용 최근 기록
+  const getRecentFlights = async (limit = 20) => {
+    const db = await getDb()
+    return rows(
+      db,
+      `SELECT pilot, city_id, city_name, score, distance, duration, crashed, condition, flown_at
+       FROM flights ORDER BY flown_at DESC LIMIT ?`,
+      [limit],
     )
   }
 
@@ -119,5 +136,5 @@ export const useFlightDb = () => {
     return stats
   }
 
-  return { addFlight, getLeaderboard, getCityStats }
+  return { addFlight, getLeaderboard, getCityStats, getRecentFlights }
 }

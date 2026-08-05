@@ -117,11 +117,14 @@ const goGlider = () => {
         <ol v-if="leaderboard.length" class="board-list">
           <li v-for="(row, i) in leaderboard" :key="i" class="board-row">
             <span class="board-rank">{{ RANK_ICONS[i] ?? `${i + 1}위` }}</span>
-            <span class="board-score">💎 {{ row.score }}점</span>
-            <span class="board-meta">
-              {{ row.distance.toLocaleString() }}m · {{ row.crashed ? '💥 추락' : '🛬 착륙' }}
+            <span class="board-main">
+              <span class="board-pilot">{{ row.pilot || '이름없음' }}</span>
+              <span class="board-meta">
+                {{ row.distance.toLocaleString() }}m · {{ row.crashed ? '💥 추락' : '🛬 착륙' }} ·
+                {{ formatDate(row.flown_at) }}
+              </span>
             </span>
-            <span class="board-date">{{ formatDate(row.flown_at) }}</span>
+            <span class="board-score">💎 {{ row.score }}점</span>
           </li>
         </ol>
 
@@ -224,20 +227,30 @@ const goGlider = () => {
   font-size: 0.95rem;
 }
 
+.board-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.board-pilot {
+  font-weight: 700;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .board-score {
   font-weight: 700;
   color: #f5a623;
-  min-width: 68px;
+  white-space: nowrap;
 }
 
 .board-meta {
-  flex: 1;
-  font-size: 0.82rem;
-  color: #606266;
-}
-
-.board-date {
-  font-size: 0.75rem;
-  color: #c0c4cc;
+  font-size: 0.76rem;
+  color: #909399;
 }
 </style>

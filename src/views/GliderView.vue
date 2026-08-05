@@ -79,9 +79,13 @@ const onHit = () => {
   flashTimer = setTimeout(() => (hitFlash.value = false), 350)
 }
 
+const registered = ref(false)
+const registering = ref(false)
+
 const onEnd = (r) => {
   result.value = r
   resultVisible.value = true
+  registered.value = false
   phase.value = 'ended'
   flightStore.setFlightResult({
     ...r,
@@ -89,19 +93,30 @@ const onEnd = (r) => {
     cityName: city.value.name,
     flownAt: Date.now(),
   })
-  // 리더보드용으로 DB에도 저장
-  flightDb.addFlight({
-    cityId: city.value.id,
-    cityName: city.value.name,
-    score: r.stars,
-    distance: r.distance,
-    duration: r.duration,
-    crashed: r.crashed,
-    condition: city.value.condition,
-    windSpeed: city.value.windSpeed,
-    temp: city.value.temp,
-    flownAt: Date.now(),
-  })
+}
+
+// 결과창에서 닉네임 쓰고 등록을 눌러야 리더보드에 저장됨
+const onRegister = async (pilot) => {
+  const r = result.value
+  registering.value = true
+  try {
+    await flightDb.addFlight({
+      pilot,
+      cityId: city.value.id,
+      cityName: city.value.name,
+      score: r.stars,
+      distance: r.distance,
+      duration: r.duration,
+      crashed: r.crashed,
+      condition: city.value.condition,
+      windSpeed: city.value.windSpeed,
+      temp: city.value.temp,
+      flownAt: Date.now(),
+    })
+    registered.value = true
+  } finally {
+    registering.value = false
+  }
 }
 
 const retry = () => {
@@ -165,6 +180,9 @@ const exitToSelect = () => {
       v-model="resultVisible"
       :result="result"
       :city="city"
+      :registered="registered"
+      :registering="registering"
+      @register="onRegister"
       @retry="retry"
       @exit="exitToSelect"
     />
