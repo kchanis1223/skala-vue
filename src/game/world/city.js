@@ -236,6 +236,11 @@ export class CityField {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
 
+  // 같은 팔레트 색이라도 건물마다 색조/명도를 살짝 흔들어서 단조롭지 않게
+  vary(hex, a, b) {
+    return this.color.set(hex).offsetHSL((a - 0.5) * 0.035, (b - 0.5) * 0.1, (a + b - 1) * 0.07)
+  }
+
   place(mesh, index, x, y, z, sx, sy, sz, rotY = 0) {
     this.dummy.position.set(x, y, z)
     this.dummy.scale.set(sx, sy, sz)
@@ -541,7 +546,7 @@ export class CityField {
           )
           entry.houses.setColorAt(
             n.ho,
-            this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
+            this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3),
           )
           // 지붕 용마루는 긴 변 방향으로
           const roofH = Math.min(w, d) * 0.4
@@ -559,7 +564,7 @@ export class CityField {
           )
           entry.roofs.setColorAt(
             n.ho,
-            this.color.set(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)]),
+            this.vary(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)], r2, r4),
           )
           n.ho++
           entry.boxes.push({
@@ -598,7 +603,7 @@ export class CityField {
             tierH,
             d * 0.68,
           )
-          const tint = this.color.set(style.tints[Math.floor(r2 * style.tints.length)])
+          const tint = this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3)
           targetMesh.setColorAt(idx, tint)
           targetMesh.setColorAt(idx + 1, tint)
           if (isGlass) n.g += 2
@@ -607,7 +612,7 @@ export class CityField {
           this.place(targetMesh, idx, bwx, bGround + (h - burial) / 2, bwz, w, h + burial, d)
           targetMesh.setColorAt(
             idx,
-            this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
+            this.vary(style.tints[Math.floor(r2 * style.tints.length)], r1, r3),
           )
           if (isGlass) n.g++
           else n.b++
