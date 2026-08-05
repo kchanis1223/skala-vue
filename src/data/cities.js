@@ -1,4 +1,5 @@
-// 기본 도시 15개. 여기 목록이 앱의 시작 도시이고, 사용자가 추가한 도시는 cityStore가 localStorage로 관리함
+// 기본 도시 9개 — 전부 전용 비행 맵이 있는 도시들.
+// 사용자가 추가한 도시는 cityStore가 localStorage로 관리하고 표준 시티 맵을 씀
 // temp/status/condition은 api 실패하거나 키 없을 때 보여줄 폴백값
 export const cityList = [
   {
@@ -28,16 +29,6 @@ export const cityList = [
     lat: 40.7128,
     lon: -74.006,
     temp: 27,
-    status: '맑음',
-    condition: 'Clear',
-  },
-  {
-    id: 'city_04',
-    name: '로스앤젤레스',
-    flag: '🇺🇸',
-    lat: 34.0522,
-    lon: -118.2437,
-    temp: 24,
     status: '맑음',
     condition: 'Clear',
   },
@@ -82,26 +73,6 @@ export const cityList = [
     condition: 'Clear',
   },
   {
-    id: 'city_09',
-    name: '마닐라',
-    flag: '🇵🇭',
-    lat: 14.5995,
-    lon: 120.9842,
-    temp: 30,
-    status: '뇌우',
-    condition: 'Thunderstorm',
-  },
-  {
-    id: 'city_10',
-    name: '스톡홀름',
-    flag: '🇸🇪',
-    lat: 59.3293,
-    lon: 18.0686,
-    temp: -3,
-    status: '눈',
-    condition: 'Snow',
-  },
-  {
     id: 'city_11',
     name: '파리',
     flag: '🇫🇷',
@@ -112,26 +83,6 @@ export const cityList = [
     condition: 'Clouds',
   },
   {
-    id: 'city_12',
-    name: '런던',
-    flag: '🇬🇧',
-    lat: 51.5074,
-    lon: -0.1278,
-    temp: 19,
-    status: '이슬비',
-    condition: 'Drizzle',
-  },
-  {
-    id: 'city_13',
-    name: '베를린',
-    flag: '🇩🇪',
-    lat: 52.52,
-    lon: 13.405,
-    temp: 20,
-    status: '비',
-    condition: 'Rain',
-  },
-  {
     id: 'city_14',
     name: '케이프타운',
     flag: '🇿🇦',
@@ -140,15 +91,5 @@ export const cityList = [
     temp: 14,
     status: '안개',
     condition: 'Mist',
-  },
-  {
-    id: 'city_15',
-    name: '베이징',
-    flag: '🇨🇳',
-    lat: 39.9042,
-    lon: 116.4074,
-    temp: 31,
-    status: '흐림',
-    condition: 'Clouds',
   },
 ]

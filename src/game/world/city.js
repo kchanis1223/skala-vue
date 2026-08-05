@@ -44,8 +44,26 @@ const MAX_SHIPS = 5
 const MAX_BRIDGES = 6
 const MAX_LAMPS = 26 // 대로변 가로등
 const MAX_CONTAINERS = 22 // 항만 컨테이너
+const MAX_HOUSES = 22 // 박공지붕 주택
 
 const CONTAINER_COLORS = ['#c8452f', '#2660a4', '#2f7d4f', '#d8a23a', '#8a5a44', '#5b6770']
+const ROOF_COLORS = ['#a8433a', '#7a8894', '#5d6d7a', '#8a6f52', '#4e6e58']
+
+// 박공지붕용 삼각 프리즘 (단위 크기, scale로 늘려 씀)
+const makeRoofGeo = () => {
+  const v = new Float32Array([
+    // 앞뒤 삼각면
+    -0.5, 0, -0.5, 0.5, 0, -0.5, 0, 1, -0.5, 0.5, 0, 0.5, -0.5, 0, 0.5, 0, 1, 0.5,
+    // 왼쪽 경사면
+    -0.5, 0, -0.5, 0, 1, -0.5, 0, 1, 0.5, -0.5, 0, -0.5, 0, 1, 0.5, -0.5, 0, 0.5,
+    // 오른쪽 경사면
+    0.5, 0, -0.5, 0.5, 0, 0.5, 0, 1, 0.5, 0.5, 0, -0.5, 0, 1, 0.5, 0, 1, -0.5,
+  ])
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(v, 3))
+  geo.computeVertexNormals()
+  return geo
+}
 const BRIDGE_TOP = 1.0 // 다리 상판 높이
 const LAUNCH_HALF = 14
 
@@ -155,6 +173,10 @@ export class CityField {
     this.lampHeadMat = new THREE.MeshBasicMaterial({ color: isNight ? '#ffd97a' : '#eef1f3' })
     this.containerGeo = new THREE.BoxGeometry(2.6, 2.6, 6.5)
     this.containerMat = new THREE.MeshLambertMaterial({ flatShading: true })
+    // 주택은 창문 텍스처 대신 민무늬 벽 + 박공지붕
+    this.houseWallMat = new THREE.MeshLambertMaterial({ flatShading: true })
+    this.roofGeo = makeRoofGeo()
+    this.roofMat = new THREE.MeshLambertMaterial({ flatShading: true })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -197,6 +219,8 @@ export class CityField {
       lampPoles: make(this.lampPoleGeo, this.lampPoleMat, MAX_LAMPS),
       lampHeads: make(this.lampHeadGeo, this.lampHeadMat, MAX_LAMPS),
       containers: make(this.containerGeo, this.containerMat, MAX_CONTAINERS),
+      houses: make(this.buildingGeo, this.houseWallMat, MAX_HOUSES),
+      roofs: make(this.roofGeo, this.roofMat, MAX_HOUSES),
       boxes: [],
     }
   }
@@ -241,6 +265,7 @@ export class CityField {
       sh: 0,
       la: 0,
       co: 0,
+      ho: 0,
     }
 
     const bx0 = lineIndexX(ox - half, seed)
@@ -499,6 +524,53 @@ export class CityField {
         const { x: bwx, z: bwz } = worldFromLogical(plan.cx, plan.cz, seed)
         const bGround = terrainHeight(bwx, bwz)
 
+        // 건물 4종 중 주택1: 저층의 절반은 박공지붕 단독주택
+        if (isLow && blockSeed(bx, bz, seed, 12) < 0.5 && n.ho < MAX_HOUSES) {
+          const bodyH = Math.max(h * 0.7, 5)
+          const hBurial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
+          this.place(
+            entry.houses,
+            n.ho,
+            bwx,
+            bGround + (bodyH - hBurial) / 2,
+            bwz,
+            w,
+            bodyH + hBurial,
+            d,
+          )
+          entry.houses.setColorAt(
+            n.ho,
+            this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
+          )
+          // 지붕 용마루는 긴 변 방향으로
+          const roofH = Math.min(w, d) * 0.4
+          const alongZ = d > w
+          this.place(
+            entry.roofs,
+            n.ho,
+            bwx,
+            bGround + bodyH,
+            bwz,
+            (alongZ ? d : w) + 1.4,
+            roofH,
+            (alongZ ? w : d) + 1.4,
+            alongZ ? Math.PI / 2 : 0,
+          )
+          entry.roofs.setColorAt(
+            n.ho,
+            this.color.set(ROOF_COLORS[Math.floor(r1 * ROOF_COLORS.length)]),
+          )
+          n.ho++
+          entry.boxes.push({
+            x: bwx,
+            z: bwz,
+            hw: w / 2,
+            hd: d / 2,
+            top: bGround + bodyH + roofH * 0.5,
+          })
+          continue
+        }
+
         // 유리 타워 비율도 구역 규칙이 있으면 위치 따라 (강남은 유리, 강북은 콘크리트)
         const glassRatio = style.glassFn
           ? style.glassFn(logicalX, logicalZ, seed)
@@ -690,6 +762,8 @@ export class CityField {
     this.hideRest(entry.lampPoles, n.la, MAX_LAMPS)
     this.hideRest(entry.lampHeads, n.la, MAX_LAMPS)
     this.hideRest(entry.containers, n.co, MAX_CONTAINERS)
+    this.hideRest(entry.houses, n.ho, MAX_HOUSES)
+    this.hideRest(entry.roofs, n.ho, MAX_HOUSES)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -811,5 +885,8 @@ export class CityField {
     this.lampHeadMat.dispose()
     this.containerGeo.dispose()
     this.containerMat.dispose()
+    this.houseWallMat.dispose()
+    this.roofGeo.dispose()
+    this.roofMat.dispose()
   }
 }

@@ -7,7 +7,6 @@ import { riverCenterX, worldFromLogical, hillLevel, seaStartX } from './cityLayo
 const DEFAULT_TINTS = ['#ffffff', '#dfe7ee', '#cdd8e3', '#e8e2d5', '#f2f5f8']
 const PASTEL_TINTS = ['#f2e2d2', '#e6d3e0', '#d3e2ec', '#f5eeda', '#dcebd8', '#f0dcd3']
 const COLD_TINTS = ['#e8ecf0', '#c9d2da', '#aab6c0', '#d5dde4', '#bfc9d2']
-const WARM_TINTS = ['#e8cbb0', '#d9a683', '#e3d3c2', '#c98a6b', '#e8e0d4']
 const CREAM_TINTS = ['#efe6d4', '#e8dcc4', '#f2ead9', '#ded2b8', '#e6e0d0']
 
 const BASE = {
@@ -85,8 +84,7 @@ const STYLES = {
     // 전역이 다운타운. 노이즈는 높이 변주만 줌
     districtFn: (lx, lz, seed, base) => 0.5 + base * 0.5,
   },
-  city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA
-  // 모스크바: 날씨와 무관하게 늘 설원, 넓은 대로, 스탈린 양식 첨탑 3채가 삼각 배치
+  // 모스크바: 날씨와 무관하게 늘 설원, 넓은 대로, 대형 스탈린 양식 첨탑 하나
   city_05: {
     heightScale: 0.85,
     glassRatio: 0.15,
@@ -94,14 +92,7 @@ const STYLES = {
     tints: COLD_TINTS,
     alwaysSnowy: true,
     majorProb: 0.32,
-    landmark: {
-      type: 'stalin',
-      towers: [
-        { x: -220, z: -260 },
-        { x: 260, z: -60 },
-        { x: -60, z: 300 },
-      ],
-    },
+    landmark: { type: 'stalin', x: -200, z: -240 },
     districtFn: (lx, lz, seed, base) => 0.25 + base * 0.35,
   },
   // 리우: 동쪽 해변 + 가파른 바위산 2개(정상에 조형물) + 파벨라 언덕
@@ -125,14 +116,14 @@ const STYLES = {
     lowriseFn: (lx, lz, seed) => (lx > seaStartX(lz, seed) - 160 ? 0.2 : 0.72),
     glassFn: (lx, lz, seed) => (lx > seaStartX(lz, seed) - 160 ? 0.35 : 0.05),
   },
-  // 시드니: 바다가 도심 안쪽으로 파고드는 만(灣) + 물가 오페라하우스 + 하버브리지
+  // 시드니: 바다가 도심 안쪽으로 파고드는 만(灣) + 물가에 대형 오페라하우스
   // 만 남쪽은 유리 CBD, 북쪽은 저층 주택가
   city_07: {
     coast: true,
     glassRatio: 0.5,
     parkProb: 0.18,
     seaFn: (lz) => 300 - 185 * Math.exp(-(((lz + 30) / 150) ** 2)),
-    landmark: { type: 'sydney', operaX: 160, operaZ: 60, bridgeX: 210, bridgeZ: -60, bridgeLen: 200 },
+    landmark: { type: 'opera', x: 150, z: 60 },
     districtFn: (lx, lz, seed, base) => (lz > 40 ? 0.5 + base * 0.4 : base * 0.3),
     lowriseFn: (lx, lz) => (lz > 40 ? 0.15 : 0.55),
   },
@@ -160,14 +151,6 @@ const STYLES = {
       return Math.max(1 - (d - 220) / 420, 0.18)
     },
   },
-  city_09: { heightScale: 0.85, lowriseRatio: 0.45, parkProb: 0.1, coast: true }, // 마닐라
-  city_10: {
-    heightScale: 0.6,
-    lowriseRatio: 0.55,
-    parkProb: 0.22,
-    tints: WARM_TINTS,
-    coast: true,
-  }, // 스톡홀름
   // 파리: 크림색 6~7층이 융단처럼 균일하게 깔리고 세느강 동안에 에펠탑 하나만 솟음
   city_11: {
     river: true,
@@ -181,8 +164,6 @@ const STYLES = {
     // 높이 변주를 좁혀서 지붕선이 고르게
     districtFn: (lx, lz, seed, base) => 0.3 + base * 0.15,
   },
-  city_12: { heightScale: 0.85, river: true }, // 런던
-  city_13: { heightScale: 0.8, parkProb: 0.24, river: true }, // 베를린
   // 케이프타운: 서쪽에 꼭대기가 판판한 테이블마운틴(발사 타워보다 살짝 높음 — 정상 착지 가능)
   // 산기슭과 동쪽 바다 사이 좁은 띠에 중저층 도시
   city_14: {
@@ -193,7 +174,6 @@ const STYLES = {
     landmark: { type: 'cable', x: -360, z: -40 },
     districtFn: (lx, lz, seed, base) => 0.2 + base * 0.35,
   },
-  city_15: { heightScale: 1.15, glassRatio: 0.4, parkProb: 0.12 }, // 베이징
 }
 
 const nameToSeed = (str = '') => {
