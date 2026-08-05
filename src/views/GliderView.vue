@@ -90,12 +90,6 @@ const onEnd = (r) => {
   resultVisible.value = true
   registered.value = false
   phase.value = 'ended'
-  flightStore.setFlightResult({
-    ...r,
-    cityId: city.value.id,
-    cityName: city.value.name,
-    flownAt: Date.now(),
-  })
 }
 
 // 결과창에서 닉네임 쓰고 등록을 눌러야 리더보드에 저장됨

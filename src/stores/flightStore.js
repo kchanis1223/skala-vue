@@ -31,12 +31,6 @@ export const useFlightStore = defineStore('flight', () => {
     previewTheme.value = previewTheme.value === key ? null : key
   }
 
-  // 직전 비행 결과 (기록실에서 쓸 예정)
-  const lastFlight = ref(null)
-  const setFlightResult = (result) => {
-    lastFlight.value = result
-  }
-
   return {
     selectedCity,
     previewTheme,
@@ -44,7 +38,5 @@ export const useFlightStore = defineStore('flight', () => {
     isNight,
     selectCity,
     togglePreview,
-    lastFlight,
-    setFlightResult,
   }
 })
