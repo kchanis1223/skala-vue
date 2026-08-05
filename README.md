@@ -5,7 +5,6 @@
 밤이면 빌딩에 불이 켜진 도심을 활강하며 크리스탈을 모읍니다.
 
 👉 **배포 주소: https://kchanis1223.github.io/skala-vue/**
-(날씨 앱만 있는 중간 제출본은 [`submit-207p` 브랜치](https://github.com/kchanis1223/skala-vue/tree/submit-207p))
 
 ## 수업에서 배운 걸로 만든 것들
 
