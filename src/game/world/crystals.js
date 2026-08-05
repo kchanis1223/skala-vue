@@ -159,7 +159,12 @@ export class CrystalField {
       this.built = true
     }
 
-    // 회전 + 둥실거림. 금색은 은은하게 맥동까지
+    // 발광 자체도 천천히 숨쉬듯 오르내림 (등급마다 박자 다름)
+    this.mats.t1.emissiveIntensity = 0.38 + Math.sin(time * 2.1) * 0.16
+    this.mats.t3.emissiveIntensity = 0.42 + Math.sin(time * 2.5 + 1.7) * 0.18
+    this.mats.t5.emissiveIntensity = 0.5 + Math.sin(time * 2.9 + 3.1) * 0.24
+
+    // 회전 + 둥실거림 + 개체마다 위상이 다른 반짝 펄스
     for (const entry of this.pool.values()) {
       const used = { t1: new Set(), t3: new Set(), t5: new Set() }
       for (const c of entry.crystals) {
@@ -169,7 +174,8 @@ export class CrystalField {
           this.dummy.scale.set(0.001, 0.001, 0.001)
           this.dummy.rotation.set(0, 0, 0)
         } else {
-          const pulse = c.tier === 't5' ? 1 + Math.sin(time * 3 + c.phase) * 0.12 : 1
+          const amp = c.tier === 't5' ? 0.15 : c.tier === 't3' ? 0.1 : 0.07
+          const pulse = 1 + Math.sin(time * 2.7 + c.phase * 2.3) * amp
           const s = c.scale * pulse
           this.dummy.position.set(c.x, c.y + Math.sin(time * 2 + c.phase) * 0.8, c.z)
           this.dummy.scale.set(s, s, s)

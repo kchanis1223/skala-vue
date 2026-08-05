@@ -19,44 +19,84 @@ const windDirLabel = computed(() => {
   const idx = Math.round(props.flightParams.wind.deg / 45) % 8
   return dirs[idx]
 })
+
+// 기상 조건 스탯 타일
+const stats = computed(() => {
+  const p = props.flightParams
+  const list = [
+    { emoji: themeInfo.value.emoji, label: '날씨', value: props.city.status },
+    { emoji: '💨', label: '바람', value: `${windDirLabel.value}풍 ${p.wind.speed}m/s` },
+    {
+      emoji: p.isNight ? '🌙' : '☀️',
+      label: '시간대',
+      value: p.isNight ? '야간 비행' : '주간 비행',
+    },
+  ]
+  if (p.precip > 0) {
+    list.push({
+      emoji: p.precipType === 'snow' ? '❄️' : '🌧️',
+      label: '강수',
+      value: '기체가 젖어 잘 가라앉음',
+    })
+  } else {
+    list.push({ emoji: '🌡️', label: '기온', value: `${props.city.temp}℃` })
+  }
+  return list
+})
+
+const cautions = [
+  { emoji: '🏙️', text: '건물·랜드마크에 부딪히면 추락' },
+  { emoji: '🎈', text: '열기구·새 떼는 스치면 감속만' },
+  { emoji: '🧭', text: '파란 빛의 벽이 비행 구역 경계' },
+  { emoji: '🛬', text: '땅에 닿으면 그대로 착륙 종료' },
+]
 </script>
 
 <template>
   <div class="briefing">
     <el-card class="briefing-card">
       <template #header>
-        <h2 class="briefing-title">🛫 비행 브리핑 — {{ city.flag }} {{ city.name }}</h2>
+        <div class="briefing-head">
+          <h2 class="briefing-title">🛫 비행 브리핑 — {{ city.flag }} {{ city.name }}</h2>
+          <span class="difficulty" title="난이도">
+            {{ '★'.repeat(difficulty) }}<span class="dim">{{ '☆'.repeat(5 - difficulty) }}</span>
+          </span>
+        </div>
       </template>
 
-      <ul class="briefing-list">
-        <li>
-          {{ themeInfo.emoji }} 날씨: <strong>{{ city.status }}</strong>
-          <template v-if="flightParams.isNight"> · 🌙 야간 비행</template>
-        </li>
-        <li>
-          💨 바람: <strong>{{ windDirLabel }}풍 {{ flightParams.wind.speed }}m/s</strong>
-          — 순풍을 타면 멀리, 역풍이면 고전합니다
-        </li>
-        <li v-if="flightParams.precip > 0">
-          {{ flightParams.precipType === 'snow' ? '❄️ 눈' : '🌧️ 비' }}: 기체가 젖어
-          <strong>더 빨리 가라앉습니다</strong>
-        </li>
-        <li>
-          💎 <strong>크리스탈을 떨어지기 전에 최대한 모으세요!</strong> 파랑 1점 · 보라 3점 · 금색
-          5점
-        </li>
-        <li>🏙️ 고층 타워 옥상에서 종이비행기를 날립니다. <strong>건물에 부딪히면 추락!</strong></li>
-        <li>🎈 열기구·새 떼는 스치면 속도와 고도만 잃습니다</li>
-        <li>🧭 파란 빛의 벽이 비행 구역 경계예요. 넘어갈 순 없습니다</li>
-        <li>
-          난이도:
-          <strong>{{ '★'.repeat(difficulty) }}{{ '☆'.repeat(5 - difficulty) }}</strong>
-        </li>
-      </ul>
+      <!-- 기상 조건 타일 -->
+      <div class="stat-grid">
+        <div v-for="s in stats" :key="s.label" class="stat-tile">
+          <span class="stat-emoji">{{ s.emoji }}</span>
+          <span class="stat-label">{{ s.label }}</span>
+          <span class="stat-value">{{ s.value }}</span>
+        </div>
+      </div>
 
+      <!-- 목표: 크리스탈 점수 칩 -->
+      <div class="goal-box">
+        <p class="goal-title">💎 떨어지기 전에 크리스탈을 최대한 모으세요!</p>
+        <div class="gem-chips">
+          <span class="gem-chip gem-blue">파랑 1점</span>
+          <span class="gem-chip gem-purple">보라 3점</span>
+          <span class="gem-chip gem-gold">금색 5점</span>
+        </div>
+      </div>
+
+      <!-- 주의사항 2열 -->
+      <div class="caution-grid">
+        <div v-for="c in cautions" :key="c.text" class="caution-item">
+          <span class="caution-emoji">{{ c.emoji }}</span>
+          <span>{{ c.text }}</span>
+        </div>
+      </div>
+
+      <!-- 조작법 키캡 -->
       <div class="controls-help">
-        <p class="controls-title">조작법</p>
-        <p>← → 선회 · ↑ 기수 올림(감속) · ↓ 기수 내림(가속)</p>
+        <span class="controls-title">🎮 조작법</span>
+        <span class="keycap">← →</span> 선회
+        <span class="keycap">↑</span> 기수 올림
+        <span class="keycap">↓</span> 기수 내림·가속
         <p class="controls-tip">💡 기수를 내려 속도를 얻고, 순풍 방향으로 활공하세요</p>
       </div>
 
@@ -74,44 +114,156 @@ const windDirLabel = computed(() => {
 }
 
 .briefing-card {
-  max-width: 480px;
+  max-width: 520px;
   width: 100%;
+}
+
+.briefing-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .briefing-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.12rem;
 }
 
-.briefing-list {
-  margin: 0 0 18px;
-  padding-left: 4px;
-  list-style: none;
-  line-height: 2.1;
+.difficulty {
+  color: #f5a623;
+  font-size: 1.05rem;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }
 
-.controls-help {
-  padding: 12px 16px;
+.difficulty .dim {
+  color: #dcdfe6;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
   border-radius: 10px;
   background: #f5f7fa;
-  margin-bottom: 18px;
+  text-align: center;
+}
+
+.stat-emoji {
+  font-size: 1.35rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: #909399;
+}
+
+.stat-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1.3;
+}
+
+.goal-box {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eef6ff, #f3eeff);
+  margin-bottom: 14px;
+}
+
+.goal-title {
+  margin: 0 0 8px;
   font-size: 0.9rem;
+  font-weight: 700;
+  color: #303133;
+}
+
+.gem-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.gem-chip {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.gem-blue {
+  background: #4aa8d8;
+}
+
+.gem-purple {
+  background: #9268d8;
+}
+
+.gem-gold {
+  background: #e0a52f;
+}
+
+.caution-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-bottom: 14px;
+}
+
+.caution-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
   color: #606266;
 }
 
-.controls-help p {
-  margin: 0;
+.caution-emoji {
+  font-size: 0.95rem;
+}
+
+.controls-help {
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: #f5f7fa;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: #606266;
 }
 
 .controls-title {
   font-weight: 700;
   color: #303133;
-  margin-bottom: 4px;
+  margin-right: 8px;
+}
+
+.keycap {
+  display: inline-block;
+  padding: 1px 8px;
+  margin: 0 2px 0 8px;
+  border: 1px solid #dcdfe6;
+  border-bottom-width: 2.5px;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #303133;
 }
 
 .controls-tip {
-  margin-top: 6px;
-  font-size: 0.82rem;
+  margin: 8px 0 0;
+  font-size: 0.78rem;
   color: #909399;
 }
 
