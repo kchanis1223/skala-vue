@@ -10,6 +10,9 @@ import {
   linePosX,
   linePosZ,
   mountainLevel,
+  riverCenterX,
+  riverHalf,
+  RIVER_PARK,
 } from './cityLayout'
 
 const COUNT = 34
@@ -68,6 +71,15 @@ export class CarField {
       const lz = car.axis === 'x' ? car.line - laneOffset : car.pos
 
       if (inSea(lx, lz, this.seed, this.style)) {
+        car.needsSpawn = true
+        continue
+      }
+      // 강이랑 나란한 도로는 강변에서 끊겨서 차도 못 감 (다리 건너는 방향은 통과)
+      if (
+        this.style?.river &&
+        car.axis === 'z' &&
+        Math.abs(lx - riverCenterX(lz, this.seed)) < riverHalf() + RIVER_PARK
+      ) {
         car.needsSpawn = true
         continue
       }

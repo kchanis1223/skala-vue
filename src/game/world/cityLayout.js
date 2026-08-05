@@ -156,7 +156,8 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   if (Math.hypot(cx, cz) < 55) return null // 발사 타워 자리
   if (inSea(cx, cz, seed, style)) return null
   if (style?.coast && cx > seaStartX(cz, seed) - 30) return null
-  if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < riverHalf() + 12) return null
+  if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < riverHalf() + RIVER_PARK + 6)
+    return null
   if (parkAt(cx, cz, seed, style)) return null
   // 산비탈엔 건물 안 지음
   const wPos = worldFromLogical(cx, cz, seed)
@@ -216,6 +217,9 @@ export const riverCenterX = (lz, seed = 0) =>
 // 강 반폭. 한강처럼 넓은 강은 스타일에서 키움
 export const riverHalf = () => layoutStyle?.riverHalf ?? 17
 
+// 강변 공원 띠 폭. 이 안에는 도로가 안 생김 (다리로 건너는 대로만 예외)
+export const RIVER_PARK = 26
+
 export const inRiver = (lx, lz, seed = 0) => Math.abs(lx - riverCenterX(lz, seed)) < riverHalf()
 
 // 해안선. 이보다 +x쪽은 바다 (해안 도시만)
@@ -236,6 +240,12 @@ export const groundKind = (x, z, seed = 0, style = null) => {
   if (style?.river && inRiver(lx, lz, seed)) return 'water'
   // 산은 도로/블록 무시하고 숲 바닥
   if (mountainLevel(x, z) > 0.24) return 'mountain'
+  // 강변 띠는 도로 대신 공원. 강을 건너는 가로 대로(다리 진입로)만 남김
+  if (style?.river && Math.abs(lx - riverCenterX(lz, seed)) < riverHalf() + RIVER_PARK) {
+    const kz = lineIndexZ(lz, seed)
+    if (isMajorZ(kz, seed) && lz - linePosZ(kz, seed) < MAJOR_W) return 'road'
+    return 'park'
+  }
   const road = roadAt(lx, lz, seed)
   if (road === 'major') return 'road'
   // 골목은 주변 부지색에 섞이는 은은한 길 (경계선처럼 안 보이게)

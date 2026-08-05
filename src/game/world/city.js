@@ -23,6 +23,7 @@ import {
   blockCenterX,
   blockCenterZ,
   mountainLevel,
+  RIVER_PARK,
 } from './cityLayout'
 
 const CITY_SPAN = 3 // 도시는 ±3청크(±770m)까지. 비행 경계보다 넉넉하게
@@ -270,8 +271,34 @@ export class CityField {
         }
         // 해변이랑 강가엔 안 지음
         if (style.coast && logicalX > seaStartX(logicalZ, seed) - 30) continue
-        if (style.river && Math.abs(logicalX - riverCenterX(logicalZ, seed)) < riverHalf() + 12)
-          continue
+        if (style.river) {
+          const rDist = Math.abs(logicalX - riverCenterX(logicalZ, seed))
+          if (rDist < riverHalf() + RIVER_PARK + 6) {
+            // 강변 공원 띠: 물가 바로 옆만 빼고 나무를 드문드문
+            if (rDist > riverHalf() + 5) {
+              for (let t = 0; t < 3 && n.t < MAX_TREES; t++) {
+                const p1 = blockSeed(bx, bz, seed, t + 51)
+                const p2 = blockSeed(bx, bz, seed, t + 62)
+                const twx = logicalX + (p1 - 0.5) * BLOCK * 0.7
+                const twz = logicalZ + (p2 - 0.5) * BLOCK * 0.7
+                if (Math.abs(twx - riverCenterX(twz, seed)) < riverHalf() + 5) continue
+                const tw = worldFromLogical(twx, twz, seed)
+                const sc = 0.7 + p2 * 0.9
+                this.place(
+                  entry.trees,
+                  n.t++,
+                  tw.x,
+                  terrainHeight(tw.x, tw.z) + 3 * sc,
+                  tw.z,
+                  sc,
+                  sc,
+                  sc,
+                )
+              }
+            }
+            continue
+          }
+        }
 
         const { x: centerX, z: centerZ } = worldFromLogical(logicalX, logicalZ, seed)
         const ground = terrainHeight(centerX, centerZ)
@@ -500,6 +527,9 @@ export class CityField {
       const lx = linePosX(k, seed) + MAJOR_W / 2
       if (lx < ox - half || lx >= ox + half) continue
       for (let z = oz - half + 4; z < oz + half && n.da < MAX_DASHES; z += 15) {
+        // 강이랑 나란한 도로는 강변 띠에서 끊기니까 점선도 안 찍음
+        if (style.river && Math.abs(lx - riverCenterX(z, seed)) < riverHalf() + RIVER_PARK)
+          continue
         putDash(lx, z, 0)
       }
     }
