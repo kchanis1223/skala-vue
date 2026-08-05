@@ -25,7 +25,6 @@ const noise2d = (x, z, scale, off = 0) => {
 }
 
 export const BLOCK = 42 // 블록 한 변 (도로 포함)
-export const ROAD_W = 7 // 도로 폭
 
 // 도시 스타일을 여기서도 알아야 함 (강폭, 산, 구역 규칙이 도시마다 달라서)
 // 비행 시작할 때 terrain의 setTerrainStyle이 같이 세팅해줌

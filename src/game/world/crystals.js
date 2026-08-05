@@ -68,7 +68,6 @@ export class CrystalField {
       })
     }
     this.pool = new Map()
-    this.free = []
     this.collected = new Set()
     this.dummy = new THREE.Object3D()
   }
@@ -214,14 +213,13 @@ export class CrystalField {
   }
 
   dispose() {
-    for (const entry of [...this.pool.values(), ...this.free]) {
+    for (const entry of this.pool.values()) {
       for (const tier of TIERS) {
         this.scene.remove(entry[tier.key])
         entry[tier.key].dispose()
       }
     }
     this.pool.clear()
-    this.free = []
     this.geo.dispose()
     for (const tier of TIERS) this.mats[tier.key].dispose()
   }

@@ -37,6 +37,31 @@ three.js 활공 물리와 절차 생성 도시**까지 직접 만들어 봤습�
 - 기록실의 주간 랭킹은 PostgreSQL의 `DISTINCT ON` + `RANK()` 윈도우 함수로 조종사별 최고 기록을 뽑아 순위를 매깁니다
 - 서버가 응답하지 않아도 앱은 브라우저 기록만으로 정상 동작합니다 (폴백)
 
+## 프로젝트 구조
+
+```
+src/
+├── views/               # 라우터가 보여주는 페이지 6개 (전부 지연 로딩)
+│   ├── WeatherHomeView      # 대시보드 (검색·필터·정렬·도시 추가)
+│   ├── WeatherDetailView    # 도시 상세 + 도시별 리더보드
+│   ├── GliderView           # 게임 (도시선택→브리핑→비행→결과 4단계)
+│   ├── RecordsView          # 주간 랭킹·도시별 최고·내 기록
+│   └── WeatherAboutView / NotFoundView
+├── components/
+│   ├── exercise/            # 대시보드 부품 — WeatherParent(상태 소유)·WeatherCard·SearchBar·BaseDashboardCard(slot)·UnitToggler
+│   ├── glider/              # 게임 UI — GliderCanvas(three.js 어댑터)·FlightBriefing·FlightHud·CompassBar·FlightResultDialog
+│   ├── AddCityDialog        # Geocoding 검색으로 도시 추가
+│   └── WeatherThemeBackground / ThemePreviewDock   # 날씨·밤낮 연동 배경
+├── stores/              # Pinia — configStore(단위)·cityStore(도시 목록+localStorage)·flightStore(선택 도시·테마)
+├── composables/         # useWeatherApi(OWM 3종+폴백)·useFlightDb(sql.js)·useLeaderboardApi(서버)·useDisplayTemp·useClock
+├── game/                # three.js 엔진 (Vue 비의존 순수 JS)
+│   ├── GliderEngine.js      # 씬 생명주기·게임 루프·워밍업 로딩
+│   ├── physics.js / input.js / weatherMapping.js
+│   └── world/               # cityLayout(배치 규칙)·terrain·city·landmarks·crystals·cars·obstacles·이펙트들
+├── data/cities.js       # 기본 도시 9개
+└── api/ (레포 루트)      # Vercel 서버리스 함수 — flights/leaderboard/stats (PostgreSQL)
+```
+
 ## 실행
 
 ```bash
