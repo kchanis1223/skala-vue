@@ -70,6 +70,26 @@ export class CrystalField {
     this.pool = new Map()
     this.collected = new Set()
     this.dummy = new THREE.Object3D()
+
+    // 먹는 순간 크리스탈 잔상이 확 퍼지며 사라지는 버스트 풀
+    this.bursts = []
+    for (let i = 0; i < 8; i++) {
+      const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+      const mesh = new THREE.Mesh(this.geo, mat)
+      mesh.visible = false
+      scene.add(mesh)
+      this.bursts.push({ mesh, mat, start: -1, scale: 1 })
+    }
+  }
+
+  spawnBurst(pick, time) {
+    const b = this.bursts.find((x) => x.start < 0) ?? this.bursts[0]
+    b.mesh.position.set(pick.x, pick.y, pick.z)
+    b.y0 = pick.y
+    b.mat.color.set(TIERS.find((t) => t.key === pick.tier).color)
+    b.scale = pick.scale
+    b.start = time
+    b.mesh.visible = true
   }
 
   makeEntry() {
@@ -158,6 +178,22 @@ export class CrystalField {
       this.built = true
     }
 
+    // 수집 버스트: 0.6초 동안 크게 부풀며 살짝 떠오르다 사라짐
+    for (const b of this.bursts) {
+      if (b.start < 0) continue
+      const t = (time - b.start) / 0.6
+      if (t >= 1) {
+        b.start = -1
+        b.mesh.visible = false
+        continue
+      }
+      const s = b.scale * (1 + t * 3.4)
+      b.mesh.scale.set(s, s, s)
+      b.mesh.position.y = b.y0 + t * 3
+      b.mesh.rotation.y = time * 4
+      b.mat.opacity = 0.95 * (1 - t) * (1 - t)
+    }
+
     // 발광 자체도 천천히 숨쉬듯 오르내림 (등급마다 박자 다름)
     this.mats.t1.emissiveIntensity = 0.38 + Math.sin(time * 2.1) * 0.16
     this.mats.t3.emissiveIntensity = 0.42 + Math.sin(time * 2.5 + 1.7) * 0.18
@@ -196,9 +232,10 @@ export class CrystalField {
     }
   }
 
-  // 기체 근처 크리스탈 수집. 이번 프레임에 얻은 점수 반환
+  // 기체 근처 크리스탈 수집. 얻은 점수랑 먹은 위치 목록을 돌려줌 (이펙트용)
   tryCollect(pos, radius = 5.5) {
     let points = 0
+    const picks = []
     for (const entry of this.pool.values()) {
       for (const c of entry.crystals) {
         if (this.collected.has(c.id)) continue
@@ -206,10 +243,11 @@ export class CrystalField {
         if (d < radius) {
           this.collected.add(c.id)
           points += c.points
+          picks.push(c)
         }
       }
     }
-    return points
+    return { points, picks }
   }
 
   dispose() {
@@ -220,6 +258,10 @@ export class CrystalField {
       }
     }
     this.pool.clear()
+    for (const b of this.bursts) {
+      this.scene.remove(b.mesh)
+      b.mat.dispose()
+    }
     this.geo.dispose()
     for (const tier of TIERS) this.mats[tier.key].dispose()
   }

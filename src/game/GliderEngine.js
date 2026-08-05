@@ -126,6 +126,7 @@ export class GliderEngine {
     this.finished = false
     this.hitCooldown = 0
     this.tickTimer = 0
+    this.boostFx = 0 // 크리스탈 먹은 직후 1→0으로 식는 부스트 연출 강도
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -283,8 +284,8 @@ export class GliderEngine {
     this.camera.position.lerp(camTarget, Math.min(dt * 4.5, 1))
     this.camera.lookAt(s.pos.x + fx * 10, s.pos.y, s.pos.z + fz * 10)
 
-    // 속도 붙으면 화각이 넓어지면서 빨라지는 느낌 남
-    const targetFov = 66 + THREE.MathUtils.clamp((s.speed - 8) / 20, 0, 1) * 12
+    // 속도 붙으면 화각이 넓어지면서 빨라지는 느낌 남. 크리스탈 부스트 순간엔 화각을 확 밀어줌
+    const targetFov = 66 + THREE.MathUtils.clamp((s.speed - 8) / 20, 0, 1) * 12 + this.boostFx * 7
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(dt * 3, 1)
     this.camera.updateProjectionMatrix()
 
@@ -293,12 +294,16 @@ export class GliderEngine {
     this.cars.update(s.pos, dt)
     this.crystalField.update(s.pos.x, s.pos.z, s.time)
 
-    // 크리스탈 줍기 (점수 합산)
-    const got = this.crystalField.tryCollect(s.pos)
+    // 크리스탈 줍기: 점수 합산 + 잔상 버스트 + 짧은 부스터로 속도가 확 붙음
+    const { points: got, picks } = this.crystalField.tryCollect(s.pos)
     if (got > 0) {
       s.stars += got
+      for (const p of picks) this.crystalField.spawnBurst(p, s.time)
+      s.speed = Math.min(s.speed + 2.4 + got * 0.4, 28)
+      this.boostFx = 1
       this.onStar?.(s.stars)
     }
+    this.boostFx = Math.max(this.boostFx - dt * 1.6, 0)
     this.precip?.update(s.pos, dt)
 
     // 기류 선: 기체의 지면 속도를 넘겨서 상대 기류를 그림
@@ -310,9 +315,9 @@ export class GliderEngine {
       dt,
     )
 
-    // 날개끝 궤적: 속도가 지배적으로 반영되고 선회는 살짝만 보탬
+    // 날개끝 궤적: 속도가 지배적으로 반영되고 선회는 살짝만. 부스트 중엔 최대로 진해짐
     const speedFactor = THREE.MathUtils.clamp((s.speed - 6) / 18, 0, 1)
-    const trailIntensity = Math.min(speedFactor + Math.abs(s.roll) * 0.25, 1)
+    const trailIntensity = Math.min(speedFactor + Math.abs(s.roll) * 0.25 + this.boostFx * 0.7, 1)
     this.trails.update(this.glider, this.camera.position, trailIntensity)
     this.gusts.update(
       this.glider.position,

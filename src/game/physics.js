@@ -40,9 +40,14 @@ export const stepFlight = (state, input, env, dt) => {
   const targetPitch = input.pitch * 0.5
   state.pitch += (targetPitch - state.pitch) * Math.min(dt * 3.2, 1)
 
+  // 순풍이면 등을 밀어주는 자체 추진이 조금 붙음 (역풍은 감속 없음 — 지면 속도에서 이미 손해봄)
+  const alongWind0 = env.wind.x * fx0 + env.wind.z * fz0
+  const windThrust = alongWind0 > 0 ? Math.min(alongWind0 * 0.35, 2.2) : 0
+
   // 비/눈 오면 공기저항 증가
   const dragK = 0.0035 * (1 + env.precip * 0.7)
-  const accel = GRAVITY * Math.sin(-state.pitch) * 0.95 - dragK * state.speed * state.speed
+  const accel =
+    GRAVITY * Math.sin(-state.pitch) * 0.95 + windThrust - dragK * state.speed * state.speed
   state.speed = clamp(state.speed + accel * dt, MIN_SPEED, MAX_SPEED)
 
   // 하강률: 기본 + 비젖음 + 실속(저속에서 기수 들면 확 가라앉음)
@@ -52,7 +57,7 @@ export const stepFlight = (state, input, env, dt) => {
   // 진행방향 바람 성분(+면 순풍): 순풍은 띄워주고 역풍은 아래로 눌러버림
   // 순풍 쪽을 더 세게 쳐줘서 바람만 잘 타면 수평 자세로도 슬금슬금 상승함
   // (그래야 고도를 지키면서 맵을 돌아다닐 수 있음)
-  const alongWind = env.wind.x * fx0 + env.wind.z * fz0
+  const alongWind = alongWind0
   state.alongWind = alongWind
   const windLift = alongWind > 0 ? clamp(alongWind * 0.55, 0, 2.6) : clamp(alongWind * 0.25, -1.6, 0)
   state.vy = state.speed * Math.sin(state.pitch) - sink + windLift
