@@ -26,10 +26,10 @@ class TipTrail {
     this.pts[0].copy(tip)
   }
 
-  update(tip, camPos, opacity) {
+  update(tip, camPos, opacity, widthScale) {
     this.push(tip)
     this.ribbon.material.opacity = opacity
-    this.ribbon.rebuild(this.pts, camPos)
+    this.ribbon.rebuild(this.pts, camPos, widthScale)
   }
 
   dispose() {
@@ -44,13 +44,15 @@ export class WingtipTrails {
     this.tmp = new THREE.Vector3()
   }
 
-  // glider: THREE.Group, intensity: 0~1 (속도/선회 반영)
+  // glider: THREE.Group, intensity: 0~1 (속도 위주 + 선회 약간)
+  // 느리면 실처럼 가늘고 희미하다가 빠를수록 굵고 진해짐
   update(glider, camPos, intensity) {
-    const opacity = 0.3 + intensity * 0.55
+    const opacity = 0.1 + intensity * 0.7
+    const widthScale = 0.4 + intensity * 1.1
     this.tmp.set(-1.7, 0.3, 1.1).applyEuler(glider.rotation).add(glider.position)
-    this.left.update(this.tmp, camPos, opacity)
+    this.left.update(this.tmp, camPos, opacity, widthScale)
     this.tmp.set(1.7, 0.3, 1.1).applyEuler(glider.rotation).add(glider.position)
-    this.right.update(this.tmp, camPos, opacity)
+    this.right.update(this.tmp, camPos, opacity, widthScale)
   }
 
   dispose() {

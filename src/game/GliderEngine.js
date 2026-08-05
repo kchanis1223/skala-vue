@@ -206,8 +206,9 @@ export class GliderEngine {
       dt,
     )
 
-    // 날개끝 궤적: 빠르거나 선회 중일수록 진하게
-    const trailIntensity = Math.min(Math.max((s.speed - 7) / 14, 0) + Math.abs(s.roll), 1)
+    // 날개끝 궤적: 속도가 지배적으로 반영되고 선회는 살짝만 보탬
+    const speedFactor = THREE.MathUtils.clamp((s.speed - 6) / 18, 0, 1)
+    const trailIntensity = Math.min(speedFactor + Math.abs(s.roll) * 0.25, 1)
     this.trails.update(this.glider, this.camera.position, trailIntensity)
     this.gusts.update(
       this.glider.position,
