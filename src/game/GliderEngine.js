@@ -284,8 +284,6 @@ export class GliderEngine {
     const lift =
       Math.min(Math.abs(s.crosswind ?? 0) * 0.1, 0.9) * (0.85 + 0.15 * Math.sin(s.time * 2.2))
     this.glider.position.set(s.pos.x, s.pos.y + lift, s.pos.z)
-    // 부스트 순간 기체가 살짝 부풀었다 돌아옴
-    this.glider.scale.setScalar(1 + this.boostFx * 0.2)
     // 순풍이면 기수가 살짝 들리고 역풍이면 눌림
     const windPitch = THREE.MathUtils.clamp((s.alongWind ?? 0) * 0.012, -0.1, 0.1)
     this.glider.rotation.set(s.pitch + windPitch, s.yaw, s.roll)
@@ -295,12 +293,6 @@ export class GliderEngine {
     const fz = -Math.cos(s.yaw)
     const camTarget = new THREE.Vector3(s.pos.x - fx * 8, s.pos.y + 2.6, s.pos.z - fz * 8)
     this.camera.position.lerp(camTarget, Math.min(dt * 4.5, 1))
-    // 부스트 중엔 카메라가 미세하게 떨려서 가속감이 몸으로 옴
-    if (this.boostFx > 0.02) {
-      const shake = this.boostFx * 0.35
-      this.camera.position.x += Math.sin(s.time * 51) * shake
-      this.camera.position.y += Math.cos(s.time * 47) * shake * 0.6
-    }
     this.camera.lookAt(s.pos.x + fx * 10, s.pos.y, s.pos.z + fz * 10)
 
     // 속도 붙으면 화각이 넓어지면서 빨라지는 느낌 남. 크리스탈 부스트 순간엔 화각을 확 밀어줌
