@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFlightDb } from '@/composables/useFlightDb'
 import { useLeaderboardApi } from '@/composables/useLeaderboardApi'
@@ -51,6 +51,18 @@ onMounted(async () => {
 })
 
 const goGlider = () => router.push('/glider')
+
+// 내 순위 아랫단 표시 규칙:
+// 5등 안이면 위 목록에서 하이라이트만, 6등이면 바로 이어서 한 줄,
+// 7등 밖이면 ... 밑에 내 위아래 한 칸까지 3줄
+const meSection = computed(() => {
+  const wk = weekly.value
+  if (!wk?.me) return null
+  const topLen = wk.top?.length ?? 0
+  if (wk.me.rank <= topLen) return null
+  if (wk.me.rank === topLen + 1) return { ellipsis: false, rows: [wk.me] }
+  return { ellipsis: true, rows: wk.around ?? [wk.me] }
+})
 </script>
 
 <template>
@@ -94,19 +106,26 @@ const goGlider = () => router.push('/glider')
             <span class="date-cell">{{ formatDate(row.flown_at) }}</span>
           </div>
 
-          <!-- 상위권 밖이면 ... 밑에 내 순위를 붙여줌 -->
-          <template v-if="weekly.me && weekly.me.rank > weekly.top.length">
-            <div class="rank-ellipsis">⋯</div>
-            <div class="rank-grid rank-row me-row">
-              <span class="rank-cell">{{ weekly.me.rank }}위</span>
-              <span class="pilot-cell">{{ weekly.me.pilot }} (나)</span>
-              <span class="score-cell">💎 {{ weekly.me.score }}</span>
-              <span>{{ weekly.me.city_name }}</span>
-              <span>{{ conditionLabel(weekly.me.condition) }}</span>
-              <span>{{ formatWind(weekly.me.wind_speed) }}</span>
-              <span>{{ formatDuration(weekly.me.duration) }}</span>
-              <span>{{ weekly.me.distance.toLocaleString() }}m</span>
-              <span class="date-cell">{{ formatDate(weekly.me.flown_at) }}</span>
+          <!-- 상위권 밖이면 ... 밑에 내 위아래 순위까지 같이 붙여줌 -->
+          <template v-if="meSection">
+            <div v-if="meSection.ellipsis" class="rank-ellipsis">⋯</div>
+            <div
+              v-for="row in meSection.rows"
+              :key="`me-${row.pilot}`"
+              class="rank-grid rank-row"
+              :class="{ 'me-row': row.pilot === myPilot }"
+            >
+              <span class="rank-cell">{{ row.rank }}위</span>
+              <span class="pilot-cell">
+                {{ row.pilot }}<template v-if="row.pilot === myPilot"> (나)</template>
+              </span>
+              <span class="score-cell">💎 {{ row.score }}</span>
+              <span>{{ row.city_name }}</span>
+              <span>{{ conditionLabel(row.condition) }}</span>
+              <span>{{ formatWind(row.wind_speed) }}</span>
+              <span>{{ formatDuration(row.duration) }}</span>
+              <span>{{ row.distance.toLocaleString() }}m</span>
+              <span class="date-cell">{{ formatDate(row.flown_at) }}</span>
             </div>
           </template>
           <p v-else-if="myPilot && !weekly.me" class="rank-note">

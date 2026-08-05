@@ -28,8 +28,11 @@ export default async function handler(req, res) {
          FROM best
          ORDER BY rank`,
       )
-      const me = pilot ? (rows.find((r) => r.pilot === pilot) ?? null) : null
-      res.status(200).json({ top: rows.slice(0, limit), me, totalPilots: rows.length })
+      const idx = pilot ? rows.findIndex((r) => r.pilot === pilot) : -1
+      const me = idx >= 0 ? rows[idx] : null
+      // 내 순위 바로 위아래 한 칸씩도 같이 줌 (리더보드에서 주변 순위 보여주기용)
+      const around = idx >= 0 ? rows.slice(Math.max(0, idx - 1), idx + 2) : []
+      res.status(200).json({ top: rows.slice(0, limit), me, around, totalPilots: rows.length })
     } catch (e) {
       console.error('주간 랭킹 조회 실패:', e)
       res.status(500).json({ error: 'DB 조회 실패' })

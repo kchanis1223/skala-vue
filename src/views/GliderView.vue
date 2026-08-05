@@ -142,6 +142,12 @@ const exitToSelect = () => {
   city.value = null
   router.replace({ query: {} })
 }
+
+// 결과창에서 바로 기록실 리더보드로. 등록한 닉네임 행이 거기서 표시됨
+const goLeaderboard = () => {
+  resultVisible.value = false
+  router.push('/records')
+}
 </script>
 
 <template>
@@ -195,6 +201,7 @@ const exitToSelect = () => {
       @register="onRegister"
       @retry="retry"
       @exit="exitToSelect"
+      @leaderboard="goLeaderboard"
     />
   </div>
 </template>

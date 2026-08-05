@@ -9,7 +9,7 @@ const props = defineProps({
 })
 
 const visible = defineModel({ type: Boolean })
-const emit = defineEmits(['retry', 'exit', 'register'])
+const emit = defineEmits(['retry', 'exit', 'register', 'leaderboard'])
 
 // 지난번 쓴 닉네임을 기본값으로 채워줌 (같은 컴퓨터에서 딴 사람이 하면 지우고 쓰면 됨)
 const PILOT_KEY = 'weather-glider:pilot-name'
@@ -66,6 +66,7 @@ const register = () => {
     </div>
     <template #footer>
       <el-button @click="emit('exit')">도시 바꾸기</el-button>
+      <el-button @click="emit('leaderboard')">🏆 리더보드</el-button>
       <el-button type="primary" @click="emit('retry')">🔁 다시 비행</el-button>
     </template>
   </el-dialog>
