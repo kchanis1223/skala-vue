@@ -121,7 +121,19 @@ const STYLES = {
     tints: WARM_TINTS,
     coast: true,
   }, // 스톡홀름
-  city_11: { heightScale: 0.55, lowriseRatio: 0.45, tints: CREAM_TINTS, river: true }, // 파리
+  // 파리: 크림색 6~7층이 융단처럼 균일하게 깔리고 세느강 동안에 에펠탑 하나만 솟음
+  city_11: {
+    river: true,
+    riverHalf: 22,
+    heightScale: 0.55,
+    glassRatio: 0,
+    lowriseRatio: 0.12,
+    parkProb: 0.14,
+    tints: CREAM_TINTS,
+    landmark: { type: 'eiffel', x: -40, z: -100 },
+    // 높이 변주를 좁혀서 지붕선이 고르게
+    districtFn: (lx, lz, seed, base) => 0.3 + base * 0.15,
+  },
   city_12: { heightScale: 0.85, river: true }, // 런던
   city_13: { heightScale: 0.8, parkProb: 0.24, river: true }, // 베를린
   city_14: { heightScale: 0.7, lowriseRatio: 0.4, coast: true }, // 케이프타운

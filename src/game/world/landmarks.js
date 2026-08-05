@@ -15,6 +15,7 @@ export class Landmarks {
     if (spec?.type === 'gwangan') this.buildGwangan(spec, isNight)
     if (spec?.type === 'empire') this.buildEmpire(spec, isNight)
     if (spec?.type === 'burj') this.buildBurj(spec, isNight)
+    if (spec?.type === 'eiffel') this.buildEiffel(spec, isNight)
 
     scene.add(this.group)
   }
@@ -195,6 +196,65 @@ export class Landmarks {
     )
     beacon.position.set(spec.x, y + 46, spec.z)
     g.add(beacon)
+  }
+
+  // 에펠탑. 다리 4개가 벌어져 있어서 아치 아래로 저공 통과가 됨
+  buildEiffel(spec, isNight) {
+    const ground = terrainHeight(spec.x, spec.z)
+    const g = this.group
+    const iron = this.mat('#7a5f43', {
+      emissive: isNight ? '#ffca5f' : '#000000',
+      emissiveIntensity: isNight ? 0.45 : 0,
+    })
+
+    // 벌어진 다리 4개 (아래 넓고 위에서 모임)
+    const legH = 40
+    const spread0 = 15
+    const spread1 = 5
+    for (const [sx, sz] of [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ]) {
+      const leg = new THREE.Mesh(this.geo(new THREE.BoxGeometry(2.6, legH + 6, 2.6)), iron)
+      const midOff = (spread0 + spread1) / 2
+      leg.position.set(spec.x + sx * midOff, ground + legH / 2, spec.z + sz * midOff)
+      // 다리를 안쪽으로 기울임
+      const lean = Math.atan2(spread0 - spread1, legH)
+      leg.rotation.x = sz * lean
+      leg.rotation.z = -sx * lean
+      g.add(leg)
+      // 다리 하부 충돌 (아치 가운데는 뚫려 있음)
+      this.boxes.push({
+        x: spec.x + sx * spread0,
+        z: spec.z + sz * spread0,
+        hw: 2.4,
+        hd: 2.4,
+        top: ground + legH * 0.55,
+      })
+    }
+
+    // 1층/2층 전망대
+    const deck1 = new THREE.Mesh(this.geo(new THREE.BoxGeometry(22, 2.4, 22)), iron)
+    deck1.position.set(spec.x, ground + legH, spec.z)
+    const deck2 = new THREE.Mesh(this.geo(new THREE.BoxGeometry(13, 2, 13)), iron)
+    deck2.position.set(spec.x, ground + 66, spec.z)
+    g.add(deck1, deck2)
+
+    // 상부 첨탑 (4각 뿔대)
+    const upper = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(1.6, 5, 52, 4)), iron)
+    upper.rotation.y = Math.PI / 4
+    upper.position.set(spec.x, ground + legH + 26, spec.z)
+    const antenna = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(0.15, 0.5, 14, 5)), iron)
+    antenna.position.set(spec.x, ground + legH + 52 + 7, spec.z)
+    g.add(upper, antenna)
+
+    // 상부 충돌 (전망대 위쪽 몸통 전체)
+    this.boxes.push(
+      { x: spec.x, z: spec.z, hw: 11, hd: 11, top: ground + legH + 2, bottom: ground + legH - 2 },
+      { x: spec.x, z: spec.z, hw: 4.5, hd: 4.5, top: ground + legH + 66, bottom: ground + legH },
+    )
   }
 
   collides(x, y, z) {
