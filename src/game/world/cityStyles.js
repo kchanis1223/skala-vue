@@ -35,7 +35,7 @@ const STYLES = {
       { x: -560, z: 80, r: 260, h: 44 },
       { x: -360, z: -540, r: 240, h: 38 },
     ],
-    landmark: { type: 'ntower', x: -480, z: -260 },
+    landmark: { type: 'ntower', x: -480, z: -260, clear: 30 },
     districtFn: (lx, lz, seed, base) =>
       lx > riverCenterX(lz, seed) ? 0.55 + base * 0.45 : base * 0.32,
     lowriseFn: (lx, lz, seed) => (lx > riverCenterX(lz, seed) ? 0.1 : 0.62),
@@ -53,7 +53,7 @@ const STYLES = {
       { x: -280, z: 300, r: 300, h: 36, homes: true },
       { x: -640, z: -430, r: 320, h: 72 }, // 뒤 병풍 숲 산
     ],
-    landmark: { type: 'gwangan', x: 430, z: -120, len: 520, deckY: 17 },
+    landmark: { type: 'gwangan', x: 430, z: -120, len: 520, deckY: 17, clear: 0 },
     districtFn: (lx, lz, seed, base) => {
       const w = worldFromLogical(lx, lz, seed)
       const hill = hillLevel(w.x, w.z)
@@ -80,7 +80,7 @@ const STYLES = {
     plazaProb: 0.05,
     gridStraight: true,
     parkRect: { x0: -300, x1: -140, z0: -260, z1: 80 },
-    landmark: { type: 'empire', x: -100, z: -80 },
+    landmark: { type: 'empire', x: -100, z: -80, clear: 78 },
     // 전역이 다운타운. 노이즈는 높이 변주만 줌
     districtFn: (lx, lz, seed, base) => 0.5 + base * 0.5,
   },
@@ -92,7 +92,7 @@ const STYLES = {
     tints: COLD_TINTS,
     alwaysSnowy: true,
     majorProb: 0.32,
-    landmark: { type: 'stalin', x: -200, z: -240 },
+    landmark: { type: 'stalin', x: -200, z: -240, clear: 70 },
     districtFn: (lx, lz, seed, base) => 0.25 + base * 0.35,
   },
   // 리우: 동쪽 해변 + 가파른 바위산 2개(정상에 조형물) + 파벨라 언덕
@@ -107,7 +107,7 @@ const STYLES = {
       { x: -150, z: -430, r: 170, h: 78 },
       { x: -340, z: -140, r: 250, h: 30, homes: true }, // 파벨라 언덕
     ],
-    landmark: { type: 'cristo', x: -360, z: 200 },
+    landmark: { type: 'cristo', x: -360, z: 200, clear: 30 },
     districtFn: (lx, lz, seed, base) => {
       // 해변에서 150m 안쪽은 호텔 라인
       if (lx > seaStartX(lz, seed) - 160) return 0.42 + base * 0.3
@@ -123,7 +123,7 @@ const STYLES = {
     glassRatio: 0.5,
     parkProb: 0.18,
     seaFn: (lz) => 300 - 185 * Math.exp(-(((lz + 30) / 150) ** 2)),
-    landmark: { type: 'opera', x: 150, z: 60 },
+    landmark: { type: 'opera', x: 150, z: 60, clear: 65 },
     districtFn: (lx, lz, seed, base) => (lz > 40 ? 0.5 + base * 0.4 : base * 0.3),
     lowriseFn: (lx, lz) => (lz > 40 ? 0.15 : 0.55),
   },
@@ -137,7 +137,7 @@ const STYLES = {
     parkProb: 0.04,
     plazaProb: 0.12,
     lotColor: '#cbb37f',
-    landmark: { type: 'burj', x: 150, z: -170 },
+    landmark: { type: 'burj', x: 150, z: -170, clear: 85 },
     districtFn: (lx, lz, seed, base) => {
       const d = Math.hypot(lx - 150, lz + 170)
       if (d < 160) return 0.7 + base * 0.3
@@ -160,7 +160,7 @@ const STYLES = {
     lowriseRatio: 0.12,
     parkProb: 0.14,
     tints: CREAM_TINTS,
-    landmark: { type: 'eiffel', x: -40, z: -100 },
+    landmark: { type: 'eiffel', x: -40, z: -100, clear: 62 },
     // 높이 변주를 좁혀서 지붕선이 고르게
     districtFn: (lx, lz, seed, base) => 0.3 + base * 0.15,
   },
@@ -171,7 +171,7 @@ const STYLES = {
     heightScale: 0.7,
     lowriseRatio: 0.42,
     mountains: [{ x: -430, z: -60, r: 330, h: 108, mesa: true }],
-    landmark: { type: 'cable', x: -360, z: -40 },
+    landmark: { type: 'cable', x: -360, z: -40, clear: 25 },
     districtFn: (lx, lz, seed, base) => 0.2 + base * 0.35,
   },
 }

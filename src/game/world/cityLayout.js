@@ -200,6 +200,9 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   // 산비탈엔 건물 안 지음
   const wPos = worldFromLogical(cx, cz, seed)
   if (mountainLevel(wPos.x, wPos.z) > 0.22) return null
+  // 랜드마크 주변도 비워둠 (겹쳐서 뚫고 나오면 흉함)
+  const lm = style?.landmark
+  if (lm?.clear && Math.hypot(wPos.x - lm.x, wPos.z - lm.z) < lm.clear) return null
 
   // 도심에서 멀어질수록 건물이 드문드문해지는 도시용 (사막 도시 같은 것)
   if (style?.buildProbFn && blockSeed(bx, bz, seed, 9) > style.buildProbFn(cx, cz, seed))
