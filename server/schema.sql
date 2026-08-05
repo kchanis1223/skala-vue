@@ -1,4 +1,4 @@
--- 전역 리더보드용 테이블. Neon 콘솔 SQL Editor에 붙여넣어서 실행하면 됨
+--리더보드용 테이블. Neon 콘솔 SQL Editor에서 실행.
 CREATE TABLE IF NOT EXISTS flights (
   id         BIGSERIAL PRIMARY KEY,
   pilot      VARCHAR(20) NOT NULL,

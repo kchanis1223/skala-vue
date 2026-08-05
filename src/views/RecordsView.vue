@@ -9,37 +9,42 @@ const flightDb = useFlightDb()
 const boardApi = useLeaderboardApi()
 
 const loading = ref(true)
-const globalTop = ref(null) // null이면 서버 연결 실패
+const weekly = ref(null) // { top, me, totalPilots } / null이면 서버 연결 실패
 const stats = ref(null)
 const myFlights = ref([])
+
+// 결과창에서 마지막으로 쓴 닉네임 = 이 브라우저의 "나"
+const myPilot = localStorage.getItem('weather-glider:pilot-name') ?? ''
 
 // DB에 저장된 condition은 openweathermap의 main 값이라 우리말로 바꿔줌
 const CONDITION_LABELS = {
   Clear: '☀️ 맑음',
-  Clouds: '☁️ 구름/흐림',
+  Clouds: '☁️ 흐림',
   Rain: '🌧️ 비',
   Drizzle: '🌦️ 이슬비',
   Thunderstorm: '⛈️ 뇌우',
   Snow: '❄️ 눈',
 }
-const conditionLabel = (c) => CONDITION_LABELS[c] ?? '🌫️ 안개'
+const conditionLabel = (c) => (c ? (CONDITION_LABELS[c] ?? '🌫️ 안개') : '-')
 
 const formatDate = (ts) => {
   const d = new Date(ts)
   return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const RANK_ICONS = ['🥇', '🥈', '🥉']
-const rankLabel = (i) => RANK_ICONS[i] ?? `${i + 1}위`
+const formatDuration = (sec) => (sec == null ? '-' : `${Math.round(sec)}초`)
+const formatWind = (w) => (w == null ? '-' : `${w}m/s`)
+
+const MEDALS = ['🥇', '🥈', '🥉']
 
 onMounted(async () => {
   // 전역(서버) 데이터랑 내 기록(sql.js)을 같이 불러옴
-  const [top, st, mine] = await Promise.all([
-    boardApi.fetchLeaderboard(null, 10),
+  const [wk, st, mine] = await Promise.all([
+    boardApi.fetchWeeklyBoard(myPilot),
     boardApi.fetchStats(),
     flightDb.getRecentFlights(20),
   ])
-  globalTop.value = top
+  weekly.value = wk
   stats.value = st
   myFlights.value = mine
   loading.value = false
@@ -53,76 +58,75 @@ const goGlider = () => router.push('/glider')
     <el-skeleton v-if="loading" :rows="8" animated />
 
     <template v-else>
-      <!-- 전역 랭킹 (서버) -->
+      <!-- 주간 랭킹 (서버, 최근 7일 · 조종사별 최고 기록 기준) -->
       <el-card class="record-card wide">
         <template #header>
           <div class="card-head">
-            <h2 class="card-title">🌍 전역 TOP 10</h2>
-            <span v-if="stats?.total" class="card-sub">
-              전 세계 {{ stats.total.pilots }}명이 {{ stats.total.flights }}회 비행
+            <h2 class="card-title">🏆 주간 리더보드 Rank</h2>
+            <span v-if="weekly" class="card-sub">
+              최근 7일 · 조종사 {{ weekly.totalPilots }}명 · 최고 기록 기준
             </span>
           </div>
         </template>
 
-        <el-table v-if="globalTop?.length" :data="globalTop" size="small">
-          <el-table-column label="순위" width="64">
-            <template #default="{ $index }">{{ rankLabel($index) }}</template>
-          </el-table-column>
-          <el-table-column prop="pilot" label="조종사" min-width="100" show-overflow-tooltip />
-          <el-table-column prop="city_name" label="도시" width="110" />
-          <el-table-column label="점수" width="90" align="right">
-            <template #default="{ row }">
-              <b class="score">💎 {{ row.score }}</b>
-            </template>
-          </el-table-column>
-          <el-table-column label="거리" width="90" align="right">
-            <template #default="{ row }">{{ row.distance.toLocaleString() }}m</template>
-          </el-table-column>
-          <el-table-column label="결과" width="80">
-            <template #default="{ row }">{{ row.crashed ? '💥 추락' : '🛬 착륙' }}</template>
-          </el-table-column>
-          <el-table-column label="일시" width="100">
-            <template #default="{ row }">{{ formatDate(row.flown_at) }}</template>
-          </el-table-column>
-        </el-table>
+        <template v-if="weekly?.top?.length">
+          <div class="rank-grid rank-header">
+            <span>순위</span><span>조종사</span><span>점수</span><span>도시</span>
+            <span>날씨</span><span>풍속</span><span>시간</span><span>거리</span><span>일시</span>
+          </div>
+
+          <div
+            v-for="row in weekly.top"
+            :key="row.pilot"
+            class="rank-grid rank-row"
+            :class="{ 'me-row': row.pilot === myPilot }"
+          >
+            <span class="rank-cell" :class="{ medal: row.rank <= 3 }">
+              {{ MEDALS[row.rank - 1] ?? `${row.rank}위` }}
+            </span>
+            <span class="pilot-cell">{{ row.pilot }}</span>
+            <span class="score-cell">💎 {{ row.score }}</span>
+            <span>{{ row.city_name }}</span>
+            <span>{{ conditionLabel(row.condition) }}</span>
+            <span>{{ formatWind(row.wind_speed) }}</span>
+            <span>{{ formatDuration(row.duration) }}</span>
+            <span>{{ row.distance.toLocaleString() }}m</span>
+            <span class="date-cell">{{ formatDate(row.flown_at) }}</span>
+          </div>
+
+          <!-- 상위권 밖이면 ... 밑에 내 순위를 붙여줌 -->
+          <template v-if="weekly.me && weekly.me.rank > weekly.top.length">
+            <div class="rank-ellipsis">⋯</div>
+            <div class="rank-grid rank-row me-row">
+              <span class="rank-cell">{{ weekly.me.rank }}위</span>
+              <span class="pilot-cell">{{ weekly.me.pilot }} (나)</span>
+              <span class="score-cell">💎 {{ weekly.me.score }}</span>
+              <span>{{ weekly.me.city_name }}</span>
+              <span>{{ conditionLabel(weekly.me.condition) }}</span>
+              <span>{{ formatWind(weekly.me.wind_speed) }}</span>
+              <span>{{ formatDuration(weekly.me.duration) }}</span>
+              <span>{{ weekly.me.distance.toLocaleString() }}m</span>
+              <span class="date-cell">{{ formatDate(weekly.me.flown_at) }}</span>
+            </div>
+          </template>
+          <p v-else-if="myPilot && !weekly.me" class="rank-note">
+            {{ myPilot }}님의 이번 주 기록이 아직 없어요 — 비행하고 랭킹에 올라보세요!
+          </p>
+        </template>
+
         <el-empty
           v-else
           :description="
-            globalTop === null
+            weekly === null
               ? '전역 랭킹 서버에 연결하지 못했어요'
-              : '아직 전역 기록이 없어요 — 1등 찬스!'
+              : '이번 주 기록이 아직 없어요 — 1등 찬스!'
           "
           :image-size="70"
         >
-          <el-button v-if="globalTop !== null" type="primary" plain @click="goGlider">
+          <el-button v-if="weekly !== null" type="primary" plain @click="goGlider">
             비행하러 가기
           </el-button>
         </el-empty>
-      </el-card>
-
-      <!-- 날씨 조건별 통계 (GROUP BY) -->
-      <el-card class="record-card">
-        <template #header>
-          <div class="card-head">
-            <h2 class="card-title">🌦️ 날씨별 난이도 통계</h2>
-          </div>
-        </template>
-        <el-table v-if="stats?.byCondition?.length" :data="stats.byCondition" size="small">
-          <el-table-column label="날씨" min-width="110">
-            <template #default="{ row }">{{ conditionLabel(row.condition) }}</template>
-          </el-table-column>
-          <el-table-column prop="plays" label="비행" width="60" align="right" />
-          <el-table-column label="평균점수" width="86" align="right">
-            <template #default="{ row }">💎 {{ row.avg_score }}</template>
-          </el-table-column>
-          <el-table-column label="추락률" width="76" align="right">
-            <template #default="{ row }">{{ row.crash_rate }}%</template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-else description="통계를 낼 기록이 아직 없어요" :image-size="60" />
-        <p v-if="stats?.byCondition?.length" class="card-note">
-          같은 실력이라도 비 오는 날은 점수가 낮게 나오는지 확인해보세요
-        </p>
       </el-card>
 
       <!-- 도시별 최고 기록 -->
@@ -130,6 +134,9 @@ const goGlider = () => router.push('/glider')
         <template #header>
           <div class="card-head">
             <h2 class="card-title">🏙️ 도시별 최고 기록</h2>
+            <span v-if="stats?.total" class="card-sub">
+              전 세계 {{ stats.total.pilots }}명이 {{ stats.total.flights }}회 비행
+            </span>
           </div>
         </template>
         <el-table v-if="stats?.cityBest?.length" :data="stats.cityBest" size="small">
@@ -140,12 +147,15 @@ const goGlider = () => router.push('/glider')
               <b class="score">💎 {{ row.score }}</b>
             </template>
           </el-table-column>
+          <el-table-column label="거리" width="90" align="right">
+            <template #default="{ row }">{{ row.distance.toLocaleString() }}m</template>
+          </el-table-column>
         </el-table>
         <el-empty v-else description="도시별 기록이 아직 없어요" :image-size="60" />
       </el-card>
 
       <!-- 내 기록 (이 브라우저의 sql.js) -->
-      <el-card class="record-card wide">
+      <el-card class="record-card">
         <template #header>
           <div class="card-head">
             <h2 class="card-title">💾 나의 비행 이력</h2>
@@ -153,20 +163,17 @@ const goGlider = () => router.push('/glider')
           </div>
         </template>
         <el-table v-if="myFlights.length" :data="myFlights" size="small">
-          <el-table-column prop="pilot" label="닉네임" min-width="90">
-            <template #default="{ row }">{{ row.pilot || '이름없음' }}</template>
-          </el-table-column>
-          <el-table-column prop="city_name" label="도시" width="110" />
-          <el-table-column label="점수" width="86" align="right">
+          <el-table-column prop="city_name" label="도시" min-width="86" />
+          <el-table-column label="점수" width="76" align="right">
             <template #default="{ row }">💎 {{ row.score }}</template>
           </el-table-column>
-          <el-table-column label="거리" width="90" align="right">
+          <el-table-column label="날씨" width="86">
+            <template #default="{ row }">{{ conditionLabel(row.condition) }}</template>
+          </el-table-column>
+          <el-table-column label="거리" width="80" align="right">
             <template #default="{ row }">{{ row.distance.toLocaleString() }}m</template>
           </el-table-column>
-          <el-table-column label="결과" width="80">
-            <template #default="{ row }">{{ row.crashed ? '💥 추락' : '🛬 착륙' }}</template>
-          </el-table-column>
-          <el-table-column label="일시" width="100">
+          <el-table-column label="일시" width="94">
             <template #default="{ row }">{{ formatDate(row.flown_at) }}</template>
           </el-table-column>
         </el-table>
@@ -187,12 +194,12 @@ const goGlider = () => router.push('/glider')
 }
 
 .record-card {
-  width: 420px;
+  width: 440px;
   max-width: 100%;
 }
 
 .record-card.wide {
-  width: 720px;
+  width: 100%;
 }
 
 .card-head {
@@ -213,13 +220,80 @@ const goGlider = () => router.push('/glider')
   white-space: nowrap;
 }
 
-.card-note {
-  margin: 10px 0 0;
-  font-size: 0.76rem;
-  color: #c0c4cc;
-}
-
 .score {
   color: #f5a623;
+}
+
+/* 주간 랭킹 표. 9칸 그리드 */
+.rank-grid {
+  display: grid;
+  grid-template-columns: 64px 1.4fr 86px 1fr 100px 76px 66px 80px 92px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+}
+
+.rank-header {
+  font-size: 0.76rem;
+  color: #909399;
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 7px;
+}
+
+.rank-row {
+  font-size: 0.86rem;
+  color: #303133;
+  border-bottom: 1px solid #f5f7fa;
+}
+
+.rank-row:last-child {
+  border-bottom: none;
+}
+
+.rank-cell {
+  font-weight: 600;
+  color: #606266;
+}
+
+/* 1~3등 메달은 조금 크게 */
+.rank-cell.medal {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.pilot-cell {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-cell {
+  font-weight: 700;
+  color: #f5a623;
+}
+
+.date-cell {
+  font-size: 0.76rem;
+  color: #909399;
+}
+
+.me-row {
+  background: rgba(64, 158, 255, 0.08);
+  border-radius: 8px;
+}
+
+.rank-ellipsis {
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 1.1rem;
+  letter-spacing: 4px;
+  padding: 2px 0;
+}
+
+.rank-note {
+  margin: 12px 4px 2px;
+  font-size: 0.8rem;
+  color: #909399;
 }
 </style>

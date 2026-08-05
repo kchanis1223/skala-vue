@@ -36,6 +36,20 @@ export const useLeaderboardApi = () => {
     }
   }
 
+  // 주간 랭킹. pilot 넘기면 내 순위도 같이 옴
+  const fetchWeeklyBoard = async (pilot, limit = 5) => {
+    if (!api) return null
+    try {
+      const { data } = await api.get('/api/leaderboard', {
+        params: { scope: 'weekly', pilot: pilot || undefined, limit },
+      })
+      return data
+    } catch (e) {
+      console.warn('주간 랭킹 조회 실패:', e.message)
+      return null
+    }
+  }
+
   const fetchStats = async () => {
     if (!api) return null
     try {
@@ -47,5 +61,5 @@ export const useLeaderboardApi = () => {
     }
   }
 
-  return { enabled, postFlight, fetchLeaderboard, fetchStats }
+  return { enabled, postFlight, fetchLeaderboard, fetchWeeklyBoard, fetchStats }
 }

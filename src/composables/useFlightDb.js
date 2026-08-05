@@ -118,7 +118,7 @@ export const useFlightDb = () => {
     const db = await getDb()
     return rows(
       db,
-      `SELECT pilot, city_id, city_name, score, distance, duration, crashed, condition, flown_at
+      `SELECT pilot, city_id, city_name, score, distance, duration, condition, wind_speed, flown_at
        FROM flights ORDER BY flown_at DESC LIMIT ?`,
       [limit],
     )

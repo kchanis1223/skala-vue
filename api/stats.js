@@ -10,30 +10,20 @@ export default async function handler(req, res) {
 
   try {
     const pool = getPool()
-    const [total, byCondition, cityBest] = await Promise.all([
+    const [total, cityBest] = await Promise.all([
       pool.query(
         `SELECT COUNT(*)::int AS flights, COUNT(DISTINCT pilot)::int AS pilots FROM flights`,
-      ),
-      // 날씨 조건별로 평균 점수랑 추락률이 어떻게 다른지
-      pool.query(
-        `SELECT condition,
-                COUNT(*)::int AS plays,
-                ROUND(AVG(score), 1)::float AS avg_score,
-                ROUND(AVG(CASE WHEN crashed THEN 1.0 ELSE 0 END) * 100) ::int AS crash_rate
-         FROM flights WHERE condition IS NOT NULL
-         GROUP BY condition ORDER BY plays DESC`,
       ),
       // 도시별 1등 한 줄씩
       pool.query(
         `SELECT DISTINCT ON (city_id)
-                city_id, city_name, pilot, score, distance, crashed, flown_at
+                city_id, city_name, pilot, score, distance, flown_at
          FROM flights
          ORDER BY city_id, score DESC, distance DESC`,
       ),
     ])
     res.status(200).json({
       total: total.rows[0],
-      byCondition: byCondition.rows,
       cityBest: cityBest.rows.sort((a, b) => b.score - a.score),
     })
   } catch (e) {

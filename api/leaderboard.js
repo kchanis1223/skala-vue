@@ -1,7 +1,7 @@
 import { getPool } from './_db.js'
 import { applyCors, numIn } from './_utils.js'
 
-// city 파라미터 있으면 그 도시 TOP, 없으면 전역 TOP
+// city 파라미터 있으면 그 도시 TOP, scope=weekly면 주간 랭킹, 없으면 전역 TOP
 export default async function handler(req, res) {
   if (applyCors(req, res)) return
   if (req.method !== 'GET') {
@@ -10,6 +10,32 @@ export default async function handler(req, res) {
 
   const city = typeof req.query.city === 'string' ? req.query.city.slice(0, 40) : null
   const limit = numIn(req.query.limit, 1, 50) ?? 10
+
+  // 주간 리더보드: 최근 7일, 조종사별 최고 기록 기준으로 랭킹.
+  // pilot 파라미터를 주면 그 사람 순위도 같이 내려줌 (상위권 밖이어도 확인 가능)
+  if (req.query.scope === 'weekly') {
+    const pilot = typeof req.query.pilot === 'string' ? req.query.pilot.trim().slice(0, 12) : ''
+    try {
+      const { rows } = await getPool().query(
+        `WITH best AS (
+           SELECT DISTINCT ON (pilot)
+                  pilot, city_name, score, distance, duration, condition, wind_speed, flown_at
+           FROM flights
+           WHERE flown_at >= now() - interval '7 days'
+           ORDER BY pilot, score DESC, distance DESC
+         )
+         SELECT *, RANK() OVER (ORDER BY score DESC, distance DESC)::int AS rank
+         FROM best
+         ORDER BY rank`,
+      )
+      const me = pilot ? (rows.find((r) => r.pilot === pilot) ?? null) : null
+      res.status(200).json({ top: rows.slice(0, limit), me, totalPilots: rows.length })
+    } catch (e) {
+      console.error('주간 랭킹 조회 실패:', e)
+      res.status(500).json({ error: 'DB 조회 실패' })
+    }
+    return
+  }
 
   try {
     const { rows } = city

@@ -161,8 +161,7 @@ const goGlider = () => {
             <span class="board-main">
               <span class="board-pilot">{{ row.pilot || '이름없음' }}</span>
               <span class="board-meta">
-                {{ row.distance.toLocaleString() }}m · {{ row.crashed ? '💥 추락' : '🛬 착륙' }} ·
-                {{ formatDate(row.flown_at) }}
+                {{ row.distance.toLocaleString() }}m · {{ formatDate(row.flown_at) }}
               </span>
             </span>
             <span class="board-score">💎 {{ row.score }}점</span>
