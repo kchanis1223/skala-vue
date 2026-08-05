@@ -1,1 +1,0 @@
-import{Et as e,Nt as t,T as n}from"./useApi-CROJJdhE-Co6mltPI.js";import{a as r}from"./index-PRmI_6ey.js";var i=e(Date.now());setInterval(()=>{i.value=Date.now()},3e4);var a=()=>i,o=e=>{let i=r();return{displayTemp:n(()=>{let n=t(e);return n==null?null:i.unit===`fahrenheit`?Math.round(n*9/5+32):n})}};export{a as n,o as t};
