@@ -35,15 +35,11 @@ const makeWingTexture = () => {
     g.lineTo(px, 0)
     g.stroke()
   }
-  g.save()
-  g.translate(256, 88)
-  g.rotate(Math.PI)
   g.fillStyle = '#2b4a7a'
   g.font = '900 88px Pretendard, Arial, sans-serif'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  g.fillText('SKALA', 0, 0)
-  g.restore()
+  g.fillText('SKALA', 256, 88)
   const tex = new THREE.CanvasTexture(canvas)
   tex.anisotropy = 4
   return tex
@@ -58,8 +54,10 @@ const buildGlider = () => {
   const pts = (s) => ({
     M: [s * 0.75, 0.3, 1.0],
     T: [s * 1.55, 0.42, 1.08],
-    W: [s * 1.68, 0.82, 1.02],
-    T2: [s * 1.28, 0.38, 0.58],
+    // 윙렛: 날개 바깥 모서리를 따라 좁고 길게 접혀 올라간 띠
+    E1: [s * 1.16, 0.35, 0.36],
+    W1: [s * 1.27, 0.56, 0.4],
+    W2: [s * 1.67, 0.65, 1.08],
   })
 
   const positions = []
@@ -72,10 +70,11 @@ const buildGlider = () => {
     }
   }
   for (const s of [-1, 1]) {
-    const { M, T, W, T2 } = pts(s)
+    const { M, T, E1, W1, W2 } = pts(s)
     tri(N, M, C) // 안쪽 패널
     tri(N, T, M) // 바깥 패널
-    tri(T2, W, T) // 윙렛 (끝이 위로 접힘)
+    tri(E1, T, W2) // 윙렛 (모서리 따라 접힌 사각 띠를 삼각형 둘로)
+    tri(E1, W2, W1)
   }
   const wingGeo = new THREE.BufferGeometry()
   wingGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
