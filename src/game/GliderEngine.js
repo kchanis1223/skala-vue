@@ -39,13 +39,15 @@ const buildGlider = () => {
 }
 
 export class GliderEngine {
-  constructor(canvas, params, { onTick, onEnd, onHit, onStar } = {}) {
+  constructor(canvas, params, { onTick, onEnd, onHit, onStar, onProgress, onReady } = {}) {
     this.canvas = canvas
     this.params = params
     this.onTick = onTick
     this.onEnd = onEnd
     this.onHit = onHit
     this.onStar = onStar
+    this.onProgress = onProgress
+    this.onReady = onReady
     this.running = false
     this.finished = false
     this.hitCooldown = 0
@@ -124,6 +126,7 @@ export class GliderEngine {
     this.clock = new THREE.Clock()
     this.resize = this.resize.bind(this)
     this.loop = this.loop.bind(this)
+    this.warmup = this.warmup.bind(this)
   }
 
   resize() {
@@ -140,8 +143,31 @@ export class GliderEngine {
     window.addEventListener('resize', this.resize)
     this.resize()
     this.running = true
-    this.clock.start()
-    this.loop()
+    // 바로 날리지 않고 맵을 다 만든 다음 비행 시작 (그동안 로딩창)
+    this.warmup()
+  }
+
+  // 지형 → 도시 → 크리스탈 순으로 프레임마다 조금씩 생성.
+  // 도중에도 렌더해서 로딩창 뒤로 도시가 깔리는 게 보임
+  warmup() {
+    if (!this.running) return
+    if (this.terrain.remaining > 0) {
+      this.terrain.update(6)
+    } else if (!this.city.built) {
+      this.city.buildStep(5)
+    } else {
+      this.crystalField.update(this.state.pos.x, this.state.pos.z, 0)
+      this.renderer.render(this.scene, this.camera)
+      this.onProgress?.(1)
+      this.onReady?.()
+      this.clock.start()
+      this.loop()
+      return
+    }
+    const total = this.terrain.total + this.city.total
+    this.onProgress?.((total - this.terrain.remaining - this.city.remaining) / (total + 1))
+    this.renderer.render(this.scene, this.camera)
+    requestAnimationFrame(this.warmup)
   }
 
   loop() {

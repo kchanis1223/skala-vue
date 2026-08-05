@@ -40,6 +40,7 @@ const MAX_CRANES = 6 // 크레인 하나가 기둥+팔 2개
 const MAX_DASHES = 150
 const MAX_SHIPS = 5
 const MAX_BRIDGES = 6
+const MAX_LAMPS = 26 // 대로변 가로등
 const BRIDGE_TOP = 1.0 // 다리 상판 높이
 const LAUNCH_HALF = 14
 
@@ -142,6 +143,11 @@ export class CityField {
     this.shipCabinMat = new THREE.MeshLambertMaterial({ color: '#e8ecef' })
     this.bridgeGeo = new THREE.BoxGeometry(1, 1, 1)
     this.bridgeMat = new THREE.MeshLambertMaterial({ color: '#4a5158' })
+    this.lampPoleGeo = new THREE.CylinderGeometry(0.14, 0.22, 6.5, 5)
+    this.lampPoleMat = new THREE.MeshLambertMaterial({ color: '#4b555e' })
+    this.lampHeadGeo = new THREE.SphereGeometry(0.45, 6, 6)
+    // 밤엔 가로등이 점점이 켜져서 대로가 빛의 선으로 보임
+    this.lampHeadMat = new THREE.MeshBasicMaterial({ color: isNight ? '#ffd97a' : '#eef1f3' })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -181,6 +187,8 @@ export class CityField {
       shipHulls: make(this.shipHullGeo, this.shipHullMat, MAX_SHIPS),
       shipCabins: make(this.shipCabinGeo, this.shipCabinMat, MAX_SHIPS),
       bridges: make(this.bridgeGeo, this.bridgeMat, MAX_BRIDGES),
+      lampPoles: make(this.lampPoleGeo, this.lampPoleMat, MAX_LAMPS),
+      lampHeads: make(this.lampHeadGeo, this.lampHeadMat, MAX_LAMPS),
       boxes: [],
     }
   }
@@ -223,6 +231,7 @@ export class CityField {
       cr: 0,
       da: 0,
       sh: 0,
+      la: 0,
     }
 
     const bx0 = lineIndexX(ox - half, seed)
@@ -274,6 +283,34 @@ export class CityField {
         if (style.river) {
           const rDist = Math.abs(logicalX - riverCenterX(logicalZ, seed))
           if (rDist < riverHalf() + RIVER_PARK + 6) {
+            // 강 위엔 가끔 유람선. 동쪽 둔치 블록에서만 놓아서 중복 안 생김
+            if (
+              logicalX > riverCenterX(logicalZ, seed) &&
+              r2 < 0.14 &&
+              n.sh < MAX_SHIPS &&
+              riverHalf() >= 24
+            ) {
+              const boatX = riverCenterX(logicalZ, seed)
+              const dir = Math.atan2(
+                riverCenterX(logicalZ + 20, seed) - riverCenterX(logicalZ - 20, seed),
+                40,
+              )
+              const bw2 = worldFromLogical(boatX, logicalZ, seed)
+              this.place(entry.shipHulls, n.sh, bw2.x, -0.9, bw2.z, 0.55, 0.5, 0.55, dir)
+              this.place(
+                entry.shipCabins,
+                n.sh,
+                bw2.x - Math.sin(dir) * 2,
+                -0.15,
+                bw2.z - Math.cos(dir) * 2,
+                0.6,
+                0.55,
+                0.5,
+                dir,
+              )
+              entry.shipHulls.setColorAt(n.sh, this.color.set('#f2f5f7'))
+              n.sh++
+            }
             // 강변 공원 띠: 물가 바로 옆만 빼고 나무를 드문드문
             if (rDist > riverHalf() + 5) {
               for (let t = 0; t < 3 && n.t < MAX_TREES; t++) {
@@ -477,6 +514,19 @@ export class CityField {
       this.place(entry.dashes, n.da++, dw.x, y, dw.z, 1, 1, 1, rotY)
     }
 
+    // 대로변 가로등. 30m 간격으로 좌우 번갈아 세움
+    const putLamp = (llx, llz) => {
+      if (n.la >= MAX_LAMPS) return
+      if (inSea(llx, llz, seed, style)) return
+      if (style.river && Math.abs(llx - riverCenterX(llz, seed)) < riverHalf() + RIVER_PARK) return
+      const lw = worldFromLogical(llx, llz, seed)
+      if (mountainLevel(lw.x, lw.z) > 0.24) return
+      const y = terrainHeight(lw.x, lw.z)
+      this.place(entry.lampPoles, n.la, lw.x, y + 3.25, lw.z, 1, 1, 1)
+      this.place(entry.lampHeads, n.la, lw.x, y + 6.6, lw.z, 1, 1, 1)
+      n.la++
+    }
+
     // 대로가 강을 건너는 자리엔 다리 상판을 놓음
     let nBridge = 0
     const putBridge = (lxc, lzc, len, alongX) => {
@@ -532,6 +582,10 @@ export class CityField {
           continue
         putDash(lx, z, 0)
       }
+      for (let z = oz - half + 10; z < oz + half; z += 30) {
+        const side = Math.floor(z / 30) % 2 === 0 ? 1 : -1
+        putLamp(lx + side * (MAJOR_W / 2 + 1.2), z)
+      }
     }
     for (let k = lineIndexZ(oz - half, seed); k <= lineIndexZ(oz + half, seed); k++) {
       if (!isMajorZ(k, seed)) continue
@@ -539,6 +593,10 @@ export class CityField {
       if (lz < oz - half || lz >= oz + half) continue
       for (let x = ox - half + 4; x < ox + half && n.da < MAX_DASHES; x += 15) {
         putDash(x, lz, Math.PI / 2)
+      }
+      for (let x = ox - half + 10; x < ox + half; x += 30) {
+        const side = Math.floor(x / 30) % 2 === 0 ? 1 : -1
+        putLamp(x, lz + side * (MAJOR_W / 2 + 1.2))
       }
     }
 
@@ -557,6 +615,8 @@ export class CityField {
     this.hideRest(entry.shipHulls, n.sh, MAX_SHIPS)
     this.hideRest(entry.shipCabins, n.sh, MAX_SHIPS)
     this.hideRest(entry.bridges, nBridge, MAX_BRIDGES)
+    this.hideRest(entry.lampPoles, n.la, MAX_LAMPS)
+    this.hideRest(entry.lampHeads, n.la, MAX_LAMPS)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -589,20 +649,42 @@ export class CityField {
     return false
   }
 
-  update(px, pz, time = 0) {
-    this.lightMat.opacity = 0.35 + 0.65 * Math.abs(Math.sin(time * 2.4))
+  get total() {
+    return (CITY_SPAN * 2 + 1) ** 2
+  }
 
-    // 맵이 유한해서 도시 전체(7x7 청크)를 처음에 다 만들어둠. 팝인 없음
-    if (!this.built) {
+  get remaining() {
+    return this.cityQueue ? this.cityQueue.length : this.total
+  }
+
+  // 맵이 유한해서 도시 전체(7x7 청크)를 시작 전에 다 만듦. 로딩 중 몇 청크씩 나눠서
+  buildStep(budget = 4) {
+    if (!this.cityQueue) {
+      this.cityQueue = []
       for (let cx = -CITY_SPAN; cx <= CITY_SPAN; cx++) {
         for (let cz = -CITY_SPAN; cz <= CITY_SPAN; cz++) {
-          const entry = this.makeEntry()
-          this.buildChunk(entry, cx, cz)
-          this.pool.set(`${cx},${cz}`, entry)
+          this.cityQueue.push([cx, cz])
         }
       }
-      this.built = true
+      this.cityQueue.sort(
+        (a, b) => Math.abs(a[0]) + Math.abs(a[1]) - (Math.abs(b[0]) + Math.abs(b[1])),
+      )
     }
+    while (budget > 0 && this.cityQueue.length > 0) {
+      const [cx, cz] = this.cityQueue.shift()
+      const entry = this.makeEntry()
+      this.buildChunk(entry, cx, cz)
+      this.pool.set(`${cx},${cz}`, entry)
+      budget--
+    }
+    this.built = this.cityQueue.length === 0
+    return this.built
+  }
+
+  update(px, pz, time = 0) {
+    this.lightMat.opacity = 0.35 + 0.65 * Math.abs(Math.sin(time * 2.4))
+    // 워밍업을 안 거치고 왔으면 여기서 한 번에 다 만듦 (폴백)
+    if (!this.built) this.buildStep(this.total)
   }
 
   dispose() {
@@ -650,5 +732,9 @@ export class CityField {
     this.shipCabinMat.dispose()
     this.bridgeGeo.dispose()
     this.bridgeMat.dispose()
+    this.lampPoleGeo.dispose()
+    this.lampPoleMat.dispose()
+    this.lampHeadGeo.dispose()
+    this.lampHeadMat.dispose()
   }
 }

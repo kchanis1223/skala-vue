@@ -8,7 +8,7 @@ const props = defineProps({
   flightParams: { type: Object, required: true },
 })
 
-const emit = defineEmits(['tick', 'end', 'hit'])
+const emit = defineEmits(['tick', 'end', 'hit', 'progress', 'ready'])
 
 const canvasRef = ref(null)
 let engine = null
@@ -18,6 +18,8 @@ onMounted(() => {
     onTick: (data) => emit('tick', data),
     onEnd: (result) => emit('end', result),
     onHit: () => emit('hit'),
+    onProgress: (frac) => emit('progress', frac),
+    onReady: () => emit('ready'),
   })
   engine.start()
 })

@@ -171,7 +171,16 @@ export class TerrainManager {
     this.paint(mesh, ox, oz)
   }
 
-  update() {
+  // 남은 작업 비율 (로딩 진행률 표시용)
+  get total() {
+    return (TERRAIN_SPAN * 2 + 1) ** 2
+  }
+
+  get remaining() {
+    return this.initialized ? this.queue.length : this.total
+  }
+
+  update(budget = 3) {
     // 맵이 유한하니까 전 청크를 처음에 다 만들고 재활용 안 함 (팝인 방지)
     if (!this.initialized) {
       const keys = []
@@ -186,7 +195,6 @@ export class TerrainManager {
       this.initialized = true
     }
     // 텍스처 그리기가 무거워서 프레임당 몇 개씩만 처리
-    let budget = 3
     while (budget > 0 && this.queue.length > 0) {
       const [cx, cz] = this.queue.shift()
       const mesh = this.makeMesh()

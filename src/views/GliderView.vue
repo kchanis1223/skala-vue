@@ -66,9 +66,23 @@ const pickCity = () => {
   prepare(pickedId.value)
 }
 
+// 맵(지형+도시)이 다 만들어질 때까지 로딩창을 띄움
+const mapLoading = ref(true)
+const mapProgress = ref(0)
+
 const startFlight = () => {
   tick.value = emptyTick()
+  mapLoading.value = true
+  mapProgress.value = 0
   phase.value = 'flying'
+}
+
+const onMapProgress = (frac) => {
+  mapProgress.value = Math.round(frac * 100)
+}
+
+const onMapReady = () => {
+  mapLoading.value = false
 }
 
 const onTick = (data) => {
@@ -126,6 +140,8 @@ const onRegister = async (pilot) => {
 const retry = () => {
   resultVisible.value = false
   tick.value = emptyTick()
+  mapLoading.value = true
+  mapProgress.value = 0
   flightKey.value++
   phase.value = 'flying'
 }
@@ -180,9 +196,26 @@ const goLeaderboard = () => {
         @tick="onTick"
         @end="onEnd"
         @hit="onHit"
+        @progress="onMapProgress"
+        @ready="onMapReady"
       />
-      <CompassBar :heading="tick.heading" />
-      <FlightHud :tick="tick" :wind="flightParams.wind" :hit-flash="hitFlash" />
+      <CompassBar v-if="!mapLoading" :heading="tick.heading" />
+      <FlightHud v-if="!mapLoading" :tick="tick" :wind="flightParams.wind" :hit-flash="hitFlash" />
+
+      <!-- 맵 생성이 끝날 때까지 로딩창. 뒤로 도시가 깔리는 게 비침 -->
+      <Transition name="load-fade">
+        <div v-if="mapLoading" class="map-loading">
+          <p class="load-emoji">🛫</p>
+          <p class="load-title">{{ city.flag }} {{ city.name }} 상공 준비 중</p>
+          <el-progress
+            :percentage="mapProgress"
+            :stroke-width="10"
+            :show-text="false"
+            class="load-bar"
+          />
+          <p class="load-tip">빌딩과 크리스탈을 배치하고 있어요</p>
+        </div>
+      </Transition>
     </div>
 
     <FlightResultDialog
@@ -230,5 +263,49 @@ const goLeaderboard = () => {
   position: relative;
   height: calc(100vh - 190px);
   min-height: 460px;
+}
+
+.map-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(18, 26, 38, 0.55);
+  backdrop-filter: blur(3px);
+  border-radius: 12px;
+  color: #fff;
+}
+
+.load-emoji {
+  margin: 0;
+  font-size: 2.4rem;
+}
+
+.load-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.load-bar {
+  width: 240px;
+  margin-top: 8px;
+}
+
+.load-tip {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.load-fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.load-fade-leave-to {
+  opacity: 0;
 }
 </style>
