@@ -23,6 +23,7 @@ import {
   blockCenterX,
   blockCenterZ,
   mountainLevel,
+  hillLevel,
   RIVER_PARK,
 } from './cityLayout'
 
@@ -41,6 +42,9 @@ const MAX_DASHES = 150
 const MAX_SHIPS = 5
 const MAX_BRIDGES = 6
 const MAX_LAMPS = 26 // 대로변 가로등
+const MAX_CONTAINERS = 22 // 항만 컨테이너
+
+const CONTAINER_COLORS = ['#c8452f', '#2660a4', '#2f7d4f', '#d8a23a', '#8a5a44', '#5b6770']
 const BRIDGE_TOP = 1.0 // 다리 상판 높이
 const LAUNCH_HALF = 14
 
@@ -148,6 +152,8 @@ export class CityField {
     this.lampHeadGeo = new THREE.SphereGeometry(0.45, 6, 6)
     // 밤엔 가로등이 점점이 켜져서 대로가 빛의 선으로 보임
     this.lampHeadMat = new THREE.MeshBasicMaterial({ color: isNight ? '#ffd97a' : '#eef1f3' })
+    this.containerGeo = new THREE.BoxGeometry(2.6, 2.6, 6.5)
+    this.containerMat = new THREE.MeshLambertMaterial({ flatShading: true })
 
     // 발사 타워: 여기 옥상에서 종이비행기를 날림
     const ground0 = terrainHeight(0, 0)
@@ -189,6 +195,7 @@ export class CityField {
       bridges: make(this.bridgeGeo, this.bridgeMat, MAX_BRIDGES),
       lampPoles: make(this.lampPoleGeo, this.lampPoleMat, MAX_LAMPS),
       lampHeads: make(this.lampHeadGeo, this.lampHeadMat, MAX_LAMPS),
+      containers: make(this.containerGeo, this.containerMat, MAX_CONTAINERS),
       boxes: [],
     }
   }
@@ -232,6 +239,7 @@ export class CityField {
       da: 0,
       sh: 0,
       la: 0,
+      co: 0,
     }
 
     const bx0 = lineIndexX(ox - half, seed)
@@ -253,9 +261,10 @@ export class CityField {
         const r3 = blockSeed(bx, bz, seed, 2)
         const r4 = blockSeed(bx, bz, seed, 3)
 
-        // 바다 블록: 건물 대신 가끔 배가 떠 있음
+        // 바다 블록: 건물 대신 가끔 배가 떠 있음 (항구 도시는 더 많이)
         if (inSea(logicalX, logicalZ, seed, style)) {
-          if (logicalX < seaStartX(logicalZ, seed) + 260 && r1 < 0.2 && n.sh < MAX_SHIPS) {
+          const shipProb = style.harbor ? 0.34 : 0.2
+          if (logicalX < seaStartX(logicalZ, seed) + 260 && r1 < shipProb && n.sh < MAX_SHIPS) {
             const rot = blockSeed(bx, bz, seed, 8) * Math.PI * 2
             const sw = worldFromLogical(logicalX, logicalZ, seed)
             this.place(entry.shipHulls, n.sh, sw.x, -1.1, sw.z, 1, 1, 1, rot)
@@ -275,6 +284,65 @@ export class CityField {
               this.color.set(SHIP_COLORS[Math.floor(r2 * SHIP_COLORS.length)]),
             )
             n.sh++
+          }
+          continue
+        }
+        // 항만 지구: 건물 대신 컨테이너 무더기 + 하역 크레인
+        if (style.harbor && logicalZ > 80 && logicalX > seaStartX(logicalZ, seed) - 75) {
+          const hw = worldFromLogical(logicalX, logicalZ, seed)
+          const hGround = Math.max(terrainHeight(hw.x, hw.z), 0)
+          for (let ci = 0; ci < 6 && n.co < MAX_CONTAINERS; ci++) {
+            const c1 = blockSeed(bx, bz, seed, ci + 70)
+            const c2 = blockSeed(bx, bz, seed, ci + 81)
+            if (c1 < 0.3) continue
+            const px = hw.x + (ci % 2) * 8 - 4 + (c2 - 0.5) * 3
+            const pz = hw.z + Math.floor(ci / 2) * 8 - 8
+            this.place(entry.containers, n.co, px, hGround + 1.3, pz, 1, 1, 1)
+            entry.containers.setColorAt(
+              n.co++,
+              this.color.set(CONTAINER_COLORS[Math.floor(c2 * CONTAINER_COLORS.length)]),
+            )
+            if (c2 > 0.55 && n.co < MAX_CONTAINERS) {
+              this.place(entry.containers, n.co, px, hGround + 3.95, pz, 1, 1, 1)
+              entry.containers.setColorAt(
+                n.co++,
+                this.color.set(CONTAINER_COLORS[Math.floor(c1 * CONTAINER_COLORS.length)]),
+              )
+            }
+          }
+          if (r3 < 0.28 && n.cr < MAX_CRANES) {
+            const mastH = 30 + r2 * 18
+            const jibLen = 24
+            this.place(
+              entry.cranes,
+              n.cr * 2,
+              hw.x,
+              hGround + (mastH - 6) / 2,
+              hw.z,
+              1.4,
+              mastH + 6,
+              1.4,
+            )
+            this.place(
+              entry.cranes,
+              n.cr * 2 + 1,
+              hw.x + jibLen / 2 - 2,
+              hGround + mastH - 1,
+              hw.z,
+              jibLen,
+              1.2,
+              1.2,
+            )
+            entry.boxes.push({ x: hw.x, z: hw.z, hw: 1.2, hd: 1.2, top: hGround + mastH })
+            entry.boxes.push({
+              x: hw.x + jibLen / 2 - 2,
+              z: hw.z,
+              hw: jibLen / 2,
+              hd: 1,
+              top: hGround + mastH,
+              bottom: hGround + mastH - 2.5,
+            })
+            n.cr++
           }
           continue
         }
@@ -439,12 +507,13 @@ export class CityField {
         const idx = isGlass ? n.g : n.b
         if (isGlass && n.g >= MAX_GLASS - 1) continue
 
+        // 언덕 경사면에서 바닥이 안 뜨게 밑동을 묻음. 주거 언덕은 경사가 심해서 더 깊이
+        const burial = hillLevel(bwx, bwz) > 0.12 ? 14 : 6
         const tiered = !isLow && h > 80 && r2 < 0.5
         if (tiered) {
           const baseH = h * 0.62
           const tierH = h * 0.38
-          // 언덕 경사면에서 바닥이 안 뜨게 밑동을 6m 묻음
-          this.place(targetMesh, idx, bwx, bGround + (baseH - 6) / 2, bwz, w, baseH + 6, d)
+          this.place(targetMesh, idx, bwx, bGround + (baseH - burial) / 2, bwz, w, baseH + burial, d)
           this.place(
             targetMesh,
             idx + 1,
@@ -461,7 +530,7 @@ export class CityField {
           if (isGlass) n.g += 2
           else n.b += 2
         } else {
-          this.place(targetMesh, idx, bwx, bGround + (h - 6) / 2, bwz, w, h + 6, d)
+          this.place(targetMesh, idx, bwx, bGround + (h - burial) / 2, bwz, w, h + burial, d)
           targetMesh.setColorAt(
             idx,
             this.color.set(style.tints[Math.floor(r2 * style.tints.length)]),
@@ -617,6 +686,7 @@ export class CityField {
     this.hideRest(entry.bridges, nBridge, MAX_BRIDGES)
     this.hideRest(entry.lampPoles, n.la, MAX_LAMPS)
     this.hideRest(entry.lampHeads, n.la, MAX_LAMPS)
+    this.hideRest(entry.containers, n.co, MAX_CONTAINERS)
   }
 
   // 건물/크레인/발사 타워에 박았는지
@@ -736,5 +806,7 @@ export class CityField {
     this.lampPoleMat.dispose()
     this.lampHeadGeo.dispose()
     this.lampHeadMat.dispose()
+    this.containerGeo.dispose()
+    this.containerMat.dispose()
   }
 }

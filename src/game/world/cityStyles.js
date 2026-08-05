@@ -2,9 +2,10 @@
 // heightScale: 전체 높이 배율 / glassRatio: 유리 타워 비율 / lowriseRatio: 저층 상가 비율
 // parkProb: 공원 블록 확률 / river: 강 유무 / tints: 건물 색조
 // 전용 맵 도시는 여기에 산(mountains)/구역 규칙(districtFn 등)/랜드마크까지 얹음
-import { riverCenterX } from './cityLayout'
+import { riverCenterX, worldFromLogical, hillLevel } from './cityLayout'
 
 const DEFAULT_TINTS = ['#ffffff', '#dfe7ee', '#cdd8e3', '#e8e2d5', '#f2f5f8']
+const PASTEL_TINTS = ['#f2e2d2', '#e6d3e0', '#d3e2ec', '#f5eeda', '#dcebd8', '#f0dcd3']
 const COLD_TINTS = ['#e8ecf0', '#c9d2da', '#aab6c0', '#d5dde4', '#bfc9d2']
 const WARM_TINTS = ['#e8cbb0', '#d9a683', '#e3d3c2', '#c98a6b', '#e8e0d4']
 const CREAM_TINTS = ['#efe6d4', '#e8dcc4', '#f2ead9', '#ded2b8', '#e6e0d0']
@@ -41,7 +42,35 @@ const STYLES = {
     lowriseFn: (lx, lz, seed) => (lx > riverCenterX(lz, seed) ? 0.1 : 0.62),
     glassFn: (lx, lz, seed) => (lx > riverCenterX(lz, seed) ? 0.55 : 0.1),
   },
-  city_02: { coast: true, heightScale: 0.95, lowriseRatio: 0.35 }, // 부산
+  // 부산: 바다로 흘러내리는 주거 언덕(산복도로) + 해안 평지 중층 + 북쪽 항만 + 광안대교
+  // 언덕(homes)은 도로/집이 유지되고 파스텔 저층이 층층이 붙음
+  city_02: {
+    coast: true,
+    harbor: true,
+    heightScale: 0.9,
+    tints: PASTEL_TINTS,
+    mountains: [
+      { x: -420, z: -160, r: 360, h: 44, homes: true },
+      { x: -280, z: 300, r: 300, h: 36, homes: true },
+      { x: -640, z: -430, r: 320, h: 72 }, // 뒤 병풍 숲 산
+    ],
+    landmark: { type: 'gwangan', x: 430, z: -120, len: 520, deckY: 17 },
+    districtFn: (lx, lz, seed, base) => {
+      const w = worldFromLogical(lx, lz, seed)
+      const hill = hillLevel(w.x, w.z)
+      // 언덕 위는 낮게, 해안 평지는 중층
+      if (hill > 0.15) return base * 0.12
+      return 0.3 + base * 0.35
+    },
+    lowriseFn: (lx, lz, seed) => {
+      const w = worldFromLogical(lx, lz, seed)
+      return hillLevel(w.x, w.z) > 0.15 ? 0.96 : 0.3
+    },
+    glassFn: (lx, lz, seed) => {
+      const w = worldFromLogical(lx, lz, seed)
+      return hillLevel(w.x, w.z) > 0.15 ? 0 : 0.3
+    },
+  },
   city_03: { heightScale: 1.3, glassRatio: 0.55, lowriseRatio: 0.12, parkProb: 0.1, river: true }, // 뉴욕
   city_04: { heightScale: 0.75, lowriseRatio: 0.5, parkProb: 0.12 }, // LA
   city_05: { heightScale: 0.9, glassRatio: 0.18, tints: COLD_TINTS }, // 모스크바

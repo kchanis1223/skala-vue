@@ -12,6 +12,7 @@ export class Landmarks {
 
     const spec = style?.landmark
     if (spec?.type === 'ntower') this.buildNTower(spec, isNight)
+    if (spec?.type === 'gwangan') this.buildGwangan(spec, isNight)
 
     scene.add(this.group)
   }
@@ -63,6 +64,61 @@ export class Landmarks {
       { x: spec.x, z: spec.z, hw: 7.5, hd: 7.5, top: ground + 47, bottom: ground + 40 },
       { x: spec.x, z: spec.z, hw: 0.9, hd: 0.9, top: ground + 69, bottom: ground + 47 },
     )
+  }
+
+  // 광안대교풍 현수교: 바다 위 긴 상판 + 주탑 2개 + 사선 케이블
+  // 상판 아래로 지나가는 것도 가능 (deckY 높이만 피하면 됨)
+  buildGwangan(spec, isNight) {
+    const g = this.group
+    const deckMat = this.mat('#5b6672')
+    const towerMat = this.mat('#dfe5ea')
+    const cableMat = this.mat('#e8edf1', {
+      emissive: isNight ? '#7fd8ff' : '#000000',
+      emissiveIntensity: isNight ? 0.7 : 0,
+    })
+
+    const deck = new THREE.Mesh(this.geo(new THREE.BoxGeometry(12, 1.6, spec.len)), deckMat)
+    deck.position.set(spec.x, spec.deckY, spec.z)
+    g.add(deck)
+    this.boxes.push({
+      x: spec.x,
+      z: spec.z,
+      hw: 6,
+      hd: spec.len / 2,
+      top: spec.deckY + 1,
+      bottom: spec.deckY - 1.2,
+    })
+
+    // 주탑 2개 (H형: 기둥 둘 + 보)
+    const towerH = 52
+    for (const tz of [spec.z - spec.len * 0.25, spec.z + spec.len * 0.25]) {
+      for (const dx of [-5, 5]) {
+        const leg = new THREE.Mesh(this.geo(new THREE.BoxGeometry(2, towerH, 2.4)), towerMat)
+        leg.position.set(spec.x + dx, spec.deckY + towerH / 2 - 14, tz)
+        g.add(leg)
+      }
+      const beam = new THREE.Mesh(this.geo(new THREE.BoxGeometry(12.4, 2, 2.4)), towerMat)
+      beam.position.set(spec.x, spec.deckY + towerH - 16, tz)
+      g.add(beam)
+      this.boxes.push({
+        x: spec.x,
+        z: tz,
+        hw: 6.5,
+        hd: 1.6,
+        top: spec.deckY + towerH - 14,
+        bottom: spec.deckY - 14,
+      })
+
+      // 주탑 꼭대기에서 상판으로 내려가는 사선 케이블 (앞뒤 2가닥씩)
+      for (const dir of [-1, 1]) {
+        const span = spec.len * 0.22
+        const cable = new THREE.Mesh(this.geo(new THREE.BoxGeometry(0.5, 0.5, span)), cableMat)
+        const topY = spec.deckY + towerH - 16
+        cable.position.set(spec.x, (topY + spec.deckY + 1) / 2, tz + (dir * span) / 2)
+        cable.rotation.x = dir * Math.atan2(topY - spec.deckY - 1, span)
+        g.add(cable)
+      }
+    }
   }
 
   collides(x, y, z) {

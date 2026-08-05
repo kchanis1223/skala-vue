@@ -40,11 +40,27 @@ const peakFactor = (x, z, m) => {
   return smooth(Math.max(1 - d / m.r, 0))
 }
 
+// 숲 산 (건물/도로 금지). homes 언덕은 여기서 제외됨
 export const mountainLevel = (x, z) => {
   const peaks = layoutStyle?.mountains
   if (!peaks) return 0
   let lv = 0
-  for (const m of peaks) lv = Math.max(lv, peakFactor(x, z, m))
+  for (const m of peaks) {
+    if (m.homes) continue
+    lv = Math.max(lv, peakFactor(x, z, m))
+  }
+  return lv
+}
+
+// 주거 언덕 (부산 산복도로처럼 경사면에 집이 붙는 곳). 건물/도로 유지됨
+export const hillLevel = (x, z) => {
+  const peaks = layoutStyle?.mountains
+  if (!peaks) return 0
+  let lv = 0
+  for (const m of peaks) {
+    if (!m.homes) continue
+    lv = Math.max(lv, peakFactor(x, z, m))
+  }
   return lv
 }
 
@@ -156,6 +172,8 @@ export const buildingPlan = (bx, bz, seed = 0, style = null) => {
   if (Math.hypot(cx, cz) < 55) return null // 발사 타워 자리
   if (inSea(cx, cz, seed, style)) return null
   if (style?.coast && cx > seaStartX(cz, seed) - 30) return null
+  // 항만 지구엔 건물 대신 컨테이너/크레인이 놓임
+  if (style?.harbor && cz > 80 && cx > seaStartX(cz, seed) - 75) return null
   if (style?.river && Math.abs(cx - riverCenterX(cz, seed)) < riverHalf() + RIVER_PARK + 6)
     return null
   if (parkAt(cx, cz, seed, style)) return null
@@ -234,7 +252,8 @@ export const groundKind = (x, z, seed = 0, style = null) => {
   if (style?.coast) {
     const s = seaStartX(lz, seed)
     if (lx > s) return 'water'
-    if (lx > s - 14) return 'sand'
+    // 항만 구역은 모래사장 대신 콘크리트 부두
+    if (lx > s - 14) return style?.harbor && lz > 80 ? 'lot' : 'sand'
   }
   // 강 위엔 도로색을 안 칠함 (다리는 3D 모델로 따로 놓임)
   if (style?.river && inRiver(lx, lz, seed)) return 'water'
