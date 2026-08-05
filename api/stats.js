@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         `SELECT DISTINCT ON (city_id)
                 city_id, city_name, pilot, score, distance, flown_at
          FROM flights
-         ORDER BY city_id, score DESC, distance DESC`,
+         ORDER BY city_id, score DESC, duration DESC`,
       ),
     ])
     res.status(200).json({

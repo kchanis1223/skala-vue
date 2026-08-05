@@ -22,9 +22,9 @@ export default async function handler(req, res) {
                   pilot, city_name, score, distance, duration, condition, wind_speed, flown_at
            FROM flights
            WHERE flown_at >= now() - interval '7 days'
-           ORDER BY pilot, score DESC, distance DESC
+           ORDER BY pilot, score DESC, duration DESC
          )
-         SELECT *, RANK() OVER (ORDER BY score DESC, distance DESC)::int AS rank
+         SELECT *, RANK() OVER (ORDER BY score DESC, duration DESC)::int AS rank
          FROM best
          ORDER BY rank`,
       )
@@ -45,12 +45,12 @@ export default async function handler(req, res) {
       ? await getPool().query(
           `SELECT pilot, city_id, city_name, score, distance, duration, crashed, condition, flown_at
            FROM flights WHERE city_id = $1
-           ORDER BY score DESC, distance DESC LIMIT $2`,
+           ORDER BY score DESC, duration DESC LIMIT $2`,
           [city, limit],
         )
       : await getPool().query(
           `SELECT pilot, city_id, city_name, score, distance, duration, crashed, condition, flown_at
-           FROM flights ORDER BY score DESC, distance DESC LIMIT $1`,
+           FROM flights ORDER BY score DESC, duration DESC LIMIT $1`,
           [limit],
         )
     res.status(200).json(rows)

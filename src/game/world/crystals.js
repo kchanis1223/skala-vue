@@ -51,7 +51,9 @@ export class CrystalField {
   constructor(scene, city, style) {
     this.scene = scene
     this.city = city
-    this.seed = style?.seed ?? 0
+    // 도시 시드에 비행마다 다른 난수를 섞어서 체인 배치가 매판 달라짐
+    // (생성은 비행 시작 때 25청크 한 번뿐이라 랜덤이어도 비용 차이 없음)
+    this.seed = (style?.seed ?? 0) + Math.floor(Math.random() * 1e6)
     this.geo = makeCrystalGeo()
     this.mats = {}
     for (const tier of TIERS) {

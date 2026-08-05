@@ -101,14 +101,14 @@ export const useFlightDb = () => {
     persist(db)
   }
 
-  // 도시별 리더보드: 점수 높은 순, 동점이면 멀리 간 순
+  // 도시별 리더보드: 점수 높은 순, 동점이면 오래 비행한 순
   const getLeaderboard = async (cityId, limit = 5) => {
     const db = await getDb()
     return rows(
       db,
       `SELECT pilot, score, distance, duration, crashed, condition, flown_at
        FROM flights WHERE city_id = ?
-       ORDER BY score DESC, distance DESC LIMIT ?`,
+       ORDER BY score DESC, duration DESC LIMIT ?`,
       [cityId, limit],
     )
   }
